@@ -1,0 +1,4 @@
+[submodule "core-src"]
+	path = core-src
+	url = https://github.com/RoyMan0/flight-clock-and-more
+	branch = mac-desktop

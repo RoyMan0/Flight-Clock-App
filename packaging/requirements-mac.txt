@@ -1,0 +1,10 @@
+# Mac app only — on top of core-src/requirements.txt
+pywebview>=6.2
+pyobjc-framework-Cocoa
+pyobjc-framework-WebKit
+pyobjc-framework-Quartz
+pyobjc-framework-CoreLocation
+pyobjc-framework-ServiceManagement
+tzdata
+pyinstaller>=6.10
+dmgbuild>=1.6
