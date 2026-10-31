@@ -15,7 +15,7 @@ New Pi plugins reach the Mac app by updating `core-src/`. Never fork plugin code
 ## Layout
 
 ```
-core-src/              the Pi repo as a git submodule, tracking its mac-desktop branch
+core-src/              the Pi repo as a git submodule, tracking its main branch
 desktop/
   app.py               entry point: runtime.prepare() → shared bootstrap → Flask thread → display thread → Cocoa
   runtime.py           data dir, env vars, sys.path, logging, single-instance lock, port, relaunch
@@ -40,7 +40,7 @@ packaging/
   ```bash
   git submodule update --remote core-src && git add core-src && git commit -m "Bump core-src"
   ```
-- The submodule tracks `mac-desktop`. Once that branch is merged into the Pi repo's `main`, switch it with `git submodule set-branch -b main core-src`.
+- The submodule tracks the Pi repo's `main` branch.
 - `build.sh` builds whatever commit `core-src` points at.
 
 ## Running and building
