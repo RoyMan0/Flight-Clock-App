@@ -64,6 +64,11 @@ try {
     $len = $frame.RawContentStream.Length
     Write-Host "  frame: $len bytes"
     if ($len -ne 64 * 32 * 3) { Write-Host "  !! expected 6144 bytes"; $failed = $true }
+    # System Stats for this PC (psutil + the GPU counters); a CI runner may have no GPU, so only CPU/memory must show
+    $body = '{"type":"local","metrics":{"cpu":true,"gpu":true,"mem":true,"uptime":true,"disk":true,"net":true}}'
+    $ss = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Method Post -ContentType "application/json" -Body $body "$url/api/system_stats/test").Content | ConvertFrom-Json
+    Write-Host "  system stats: ok=$($ss.ok) os=$($ss.os) values=$($ss.values | ConvertTo-Json -Compress) missing=$($ss.missing | ConvertTo-Json -Compress) $($ss.message)"
+    if (-not $ss.ok -or -not $ss.values.cpu -or -not $ss.values.mem) { Write-Host "  !! system stats for this PC failed"; $failed = $true }
 } finally {
     Stop-Process -Id $p.Id -Force
 }

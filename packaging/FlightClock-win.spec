@@ -23,7 +23,7 @@ import bundle  # noqa: E402
 datas = bundle.datas(CORE, DESKTOP)
 datas.append((os.path.join(ART, "icon.ico"), "desktop"))        # window + tray icon (shell_win._icon_path)
 hiddenimports, SHARED_PACKAGES = bundle.hiddenimports(CORE)
-hiddenimports += ["shell_win", "win_tray", "clr", "webview.platforms.winforms", "webview.platforms.edgechromium"]
+hiddenimports += ["shell_win", "win_tray", "clr", "webview.platforms.winforms", "webview.platforms.edgechromium", "psutil"]
 binaries = []
 
 # pywebview's WebView2 loader DLLs and .NET assemblies live in webview/lib
