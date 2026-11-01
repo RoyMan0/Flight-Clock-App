@@ -14,6 +14,7 @@ thread goes through AppHelper.callAfter.
 
 import logging
 import os
+import subprocess
 import threading
 
 import AppKit
@@ -116,7 +117,19 @@ class PanelApi:
 # Shell
 # ----------------------------------------------------------------------
 
+def _apple_silicon() -> bool:
+    """True on an M-series Mac, even when this (Intel) build runs under Rosetta."""
+    try:
+        return subprocess.run(["sysctl", "-n", "hw.optional.arm64"], capture_output=True,
+                              text=True, timeout=3).stdout.strip() == "1"
+    except Exception:
+        return os.uname().machine == "arm64"
+
+
 class Shell(ShellBase):
+    # The update check links to the DMG for this Mac's chip (build.sh names them)
+    INSTALLER_SUFFIX = "-AppleSilicon.dmg" if _apple_silicon() else "-Intel.dmg"
+
     def __init__(self, base_url, pm=None, setup_mode=False, lan_url=None):
         super().__init__(base_url, pm=pm, setup_mode=setup_mode, lan_url=lan_url)
         self._status_item = None

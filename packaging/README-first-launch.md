@@ -2,11 +2,13 @@
 
 Flight Clock shows the flight-clock LED display in a window on your Mac: planes overhead, the clock and weather, and the other modules.
 
-**Needs:** a Mac with Apple Silicon (M1 or newer) running macOS 13 Ventura or later.
+**Needs:** a Mac running macOS 13 Ventura or later with Apple Silicon (M1 or newer), or macOS 11 Big Sur or later with an Intel chip.
+
+Not sure which you have? Apple menu → **About This Mac**: "Chip: Apple M…" means Apple Silicon; "Processor: … Intel …" means Intel.
 
 ## Install
 
-1. Download `FlightClock-<version>.dmg` and double-click it.
+1. Download the DMG for your Mac, `FlightClock-<version>-AppleSilicon.dmg` or `FlightClock-<version>-Intel.dmg`, and double-click it.
 2. Drag **Flight Clock** onto the **Applications** folder.
 3. Eject the "Flight Clock" disk in Finder.
 

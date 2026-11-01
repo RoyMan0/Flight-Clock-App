@@ -9,7 +9,7 @@ native window instead of on an LED matrix.
   Dev:    .venv/bin/python desktop/app.py            (Windows: .venv\Scripts\python desktop\app.py)
   Headless (no windows; open the printed URL in a browser):
           FLIGHTCLOCK_HEADLESS=1 .venv/bin/python desktop/app.py
-  Built:  packaging/build.sh      →  dist/Flight Clock.app, dist/FlightClock-<version>.dmg
+  Built:  packaging/build.sh      →  dist/FlightClock-<version>-AppleSilicon.dmg, -Intel.dmg
           packaging/build-win.ps1 →  dist/FlightClock-Setup-<version>.exe, dist/FlightClock-<version>-portable.zip
 """
 

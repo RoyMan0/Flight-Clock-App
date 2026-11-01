@@ -1,4 +1,5 @@
-# PyInstaller spec for Flight Clock.app (Apple Silicon). Run via packaging/build.sh.
+# PyInstaller spec for Flight Clock.app. Run via packaging/build.sh, which builds it twice:
+# FC_ARCH=arm64 (Apple Silicon) and FC_ARCH=x86_64 (Intel, from an x86_64 Python under Rosetta).
 #
 # Bundles the shared code from core-src/ (the flight-clock-and-more repo) plus
 # the desktop shell. What ships is listed in packaging/bundle.py (an allowlist:
@@ -45,7 +46,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
-    target_arch="arm64",
+    target_arch=os.environ.get("FC_ARCH", "arm64"),
     codesign_identity=None,          # ad-hoc; build.sh re-signs (Developer ID when configured)
 )
 
@@ -61,7 +62,7 @@ app = BUNDLE(
         "CFBundleDisplayName": "Flight Clock",
         "CFBundleShortVersionString": __version__,
         "CFBundleVersion": __version__,
-        "LSMinimumSystemVersion": "13.0",
+        "LSMinimumSystemVersion": "11.0" if os.environ.get("FC_ARCH") == "x86_64" else "13.0",
         "LSApplicationCategoryType": "public.app-category.utilities",
         "NSHighResolutionCapable": True,
         "NSHumanReadableCopyright": "Flight Clock",

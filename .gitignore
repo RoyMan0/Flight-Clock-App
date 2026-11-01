@@ -1,4 +1,5 @@
 .venv/
+.venv-intel/
 build/
 dist/
 __pycache__/

@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Flight Clock for Mac and Windows** runs the Raspberry Pi LED flight clock on a computer. The Pi version needs a 64×32 RGB LED panel; the desktop app shows that panel in a window.
-- Mac: a standalone `.app`, shipped as a drag-to-Applications DMG.
+- Mac: a standalone `.app`, shipped as a drag-to-Applications DMG: one for Apple Silicon, one for Intel.
 - Windows: an Inno Setup installer plus a portable zip, built on GitHub Actions (an `.exe` can't be built on a Mac).
 
 There is **one plugin codebase**: `core-src/` is the Pi repo (`RoyMan0/flight-clock-and-more`), and it has its own detailed CLAUDE.md. This repo adds only:
@@ -39,8 +39,8 @@ desktop/
   version.py           __version__ and the GitHub repo checked for releases
 packaging/
   bundle.py            what ships (asset allowlist + module list), shared by both specs
-  build.sh             Mac: uv venv → make_art.py → PyInstaller → codesign → dmgbuild
-  FlightClock.spec     Mac PyInstaller spec (arm64, onedir BUNDLE)
+  build.sh             Mac: per chip, uv venv → make_art.py → PyInstaller → codesign → dmgbuild
+  FlightClock.spec     Mac PyInstaller spec (FC_ARCH=arm64 | x86_64, onedir BUNDLE)
   build-win.ps1        Windows: uv venv → make_art.py → PyInstaller → audit → zip → Inno Setup
   FlightClock-win.spec Windows PyInstaller spec (x64, onedir, UTF-8 mode)
   installer.iss        Inno Setup script (per-user install, no admin prompt)
@@ -71,7 +71,9 @@ packaging/
 FLIGHTCLOCK_DATA_DIR=/tmp/fc-test .venv/bin/python desktop/app.py     # throwaway data dir; logs go to <dir>/logs
 
 # Build the app + DMG
-packaging/build.sh        # → dist/Flight Clock.app, dist/FlightClock-<version>.dmg
+packaging/build.sh        # → dist/Flight Clock.app + dist/FlightClock-<version>-AppleSilicon.dmg,
+                          #   dist/intel/Flight Clock.app + dist/FlightClock-<version>-Intel.dmg
+packaging/build.sh arm64  # or `intel`: just one
 
 # Test the built app with a throwaway data dir (the env var is ignored when launched via Finder/open)
 FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight Clock"
@@ -79,7 +81,11 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
 
 - Windows (on a PC): `powershell -ExecutionPolicy Bypass -File packaging\build-win.ps1` → `dist\Flight Clock\`, `dist\FlightClock-Setup-<version>.exe`, `dist\FlightClock-<version>-portable.zip`. Dev run: `.venv\Scripts\python desktop\app.py` (it restarts itself in Python's UTF-8 mode). From the Mac, push and download the artifact from the "Windows build" Actions run (`gh run download`).
 - Use the uv-managed **arm64** Python 3.12 in `.venv`. `/usr/local/bin/python3` and `/usr/local` Homebrew are Intel builds running under Rosetta.
-- To release: bump `desktop/version.py`, run `build.sh`, and upload the DMG to a GitHub Release on `RELEASES_REPO` with tag `v<version>`; pushing the tag makes the Windows workflow attach the installer and zip. The update check reads `releases/latest` and links to the first `.dmg` (Mac) or `.exe` (Windows) asset.
+- **Intel build:** `.venv-intel` holds an x86_64 Python 3.12 that runs under Rosetta. Three gotchas, all handled in `build.sh`:
+  - The Command Line Tools on macOS 27 are arm64-only, so an x86_64 process can't run `lipo`/`codesign`/`xcrun`. Shims in `build/shims` run them with `arch -arm64`; dmgbuild (which calls `/usr/bin/SetFile` by full path) runs from the arm64 `.venv`.
+  - uv picks wheels for the build Mac's macOS (numpy's x86_64 wheel needs macOS 14), so the Intel install uses `--python-platform x86_64-apple-darwin` with `MACOSX_DEPLOYMENT_TARGET=11.0`. The Intel `LSMinimumSystemVersion` is 11.0; check no binary's `minos` exceeds it after dependency bumps.
+  - Launch at login (`SMAppService`) needs macOS 13; on 11–12 the card reports it unavailable.
+- To release: bump `desktop/version.py`, run `build.sh`, and upload both DMGs to a GitHub Release on `RELEASES_REPO` with tag `v<version>`; pushing the tag makes the Windows workflow attach the installer and zip. The update check reads `releases/latest` and links to the `-AppleSilicon.dmg` / `-Intel.dmg` asset for the Mac's chip (`hw.optional.arm64`, so an Intel build under Rosetta is pointed at the native one) or the `.exe` (Windows).
 
 ## How it fits together
 
@@ -147,13 +153,13 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
 ## Verification checklist (before a release)
 
 1. `packaging/build.sh` succeeds.
-2. Run the built binary with a throwaway `FLIGHTCLOCK_DATA_DIR` and check:
+2. Run each built binary (the Intel one runs under Rosetta) with a throwaway `FLIGHTCLOCK_DATA_DIR` and check:
    - The log has no "failed to import" lines.
    - All plugins appear in `GET /api/status`.
    - `/`, `/config`, `/about`, `/flights` and `/display` return 200.
 3. Audit the bundle for personal files and secrets:
    ```bash
-   find "dist/Flight Clock.app" -name close.txt -o -name farthest.txt -o -name secrets.json -o -name config.json -o -path "*static/maps*"
+   find "dist/Flight Clock.app" "dist/intel/Flight Clock.app" -name close.txt -o -name farthest.txt -o -name secrets.json -o -name config.json -o -path "*static/maps*"
    ```
    It must print nothing.
 4. Mount the DMG and check it holds the app plus an Applications link.
