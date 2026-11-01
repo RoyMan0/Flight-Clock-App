@@ -124,124 +124,187 @@ body[data-case="midcentury"] .c-e, body[data-case="midcentury"] .c-f {
 body[data-case="midcentury"] .c-e { left: 1.4%; }
 body[data-case="midcentury"] .c-f { right: 1.4%; }
 
+
 /* ============================ mac_se: compact all-in-one ============================ */
-body[data-case="mac_se"] { --se: #d7cfb8; --se2: #c4bba2; --se3: #b5ab90; }
-body[data-case="mac_se"][data-color="platinum"] { --se: #e3e2dc; --se2: #cfcdc5; --se3: #bdbab0; }
+/* Front view of a late-80s compact: textured beige plastic, the tube sunk in a deep
+   tapered recess (a border-coloured frustum: shadowed top wall, lit bottom wall),
+   a badge and the floppy slot below, and the stepped-back foot. Sizes in vw/vh
+   follow the window, which the app keeps at the case's ratio. */
+body[data-case="mac_se"] { --se: #ddd5bf; --se2: #cdc4ab; --se3: #b3a98e; --sehi: #f1ebda;
+  --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  .35 0 0 0 -.12'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>"); }
+body[data-case="mac_se"][data-color="platinum"] { --se: #e4e3dc; --se2: #d3d1c8; --se3: #b7b4a9; --sehi: #f6f5f0; }
 
 body[data-case="mac_se"] .c-body {
-  display: block; left: 4%; right: 4%; top: 1.5%; bottom: 4%; border-radius: 5% / 4%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--se) 92%, white) 0%, var(--se) 8%, var(--se2) 100%);
-  box-shadow: 0 8px 16px rgba(0,0,0,.4), inset -6px 0 10px rgba(0,0,0,.08), inset 6px 0 10px rgba(255,255,255,.25);
+  display: block; left: 3%; right: 3%; top: 1%; bottom: 1.5%; border-radius: 5.5% / 4.2%;
+  background:
+    var(--noise),
+    linear-gradient(90deg, rgba(255,255,255,.35), transparent 4%, transparent 95%, rgba(0,0,0,.10)),
+    linear-gradient(180deg, var(--sehi) 0%, var(--se) 3%, var(--se) 60%, var(--se2) 100%);
+  box-shadow: 0 1vh 2.4vh rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.18),
+              inset 0 .3vh 0 rgba(255,255,255,.55), inset 0 -.4vh .6vh rgba(0,0,0,.12);
 }
-/* the sunken bezel around the tube */
+/* the moulded lip around the front face */
+body[data-case="mac_se"] .c-body::before { content: ""; position: absolute; inset: 1.1% 1.6% 7% 1.6%; border-radius: 4.5% / 3.6%;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 0 1px rgba(0,0,0,.06); }
+
+/* tapered recess around the tube; its padding box is the dark glass */
 body[data-case="mac_se"] .c-a {
-  display: block; left: 13%; right: 13%; top: 7%; height: 46%; border-radius: 6% / 5%;
-  background: linear-gradient(var(--se3), var(--se2));
-  box-shadow: inset 0 5px 10px rgba(0,0,0,.3), inset 0 -2px 3px rgba(255,255,255,.45);
+  display: block; left: 11%; right: 11%; top: 6%; height: 47%; box-sizing: border-box; border-radius: 9% / 8.5%;
+  border-style: solid; border-width: 3.2vh 3.6vw 2.2vh;
+  border-color: color-mix(in srgb, var(--se3) 85%, black) var(--se2) color-mix(in srgb, var(--se) 55%, white) var(--se2);
+  background: radial-gradient(ellipse 85% 80% at 50% 45%, #3b3f3c, #1c1f1d 62%, #0c0d0d) padding-box;
+  box-shadow: 0 -.25vh 0 rgba(0,0,0,.14), 0 .3vh 0 rgba(255,255,255,.55),
+              inset 0 0 2.2vw rgba(0,0,0,.85), inset 0 0 0 1px #050505;
 }
-/* the dark CRT glass (4:3), with the 2:1 screen in it */
-body[data-case="mac_se"] .c-b {
-  display: block; left: 18%; right: 18%; top: 10.5%; height: 39%; border-radius: 9% / 8%;
-  background: radial-gradient(ellipse at 50% 45%, #2b2d2c, #121413 70%);
-  box-shadow: inset 0 0 14px rgba(0,0,0,.9);
-}
-body[data-case="mac_se"] #well { left: 21%; width: 58%; top: 18.4%; height: 22.8%; }
-body[data-case="mac_se"] #screen { border-radius: 8px / 12px; }
-body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 8px / 12px; pointer-events: none; z-index: 6;
-  background: repeating-linear-gradient(rgba(0,0,0,.12) 0 1px, transparent 1px 3px),
+/* side walls catch less light than the top and bottom: darken their outer half */
+body[data-case="mac_se"] .c-a::before { content: ""; position: absolute; inset: -3.2vh -3.6vw -2.2vh; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0,0,0,.10), transparent 7%, transparent 93%, rgba(0,0,0,.12)); }
+/* the bulge of the glass */
+body[data-case="mac_se"] .c-a::after { content: ""; position: absolute; inset: 0; border-radius: 7% / 7%; pointer-events: none;
+  background: radial-gradient(ellipse 70% 45% at 32% 18%, rgba(255,255,255,.10), transparent 70%); }
+body[data-case="mac_se"] #well { left: 21%; width: 58%; top: 18.6%; height: 22.8%; }
+body[data-case="mac_se"] #screen { border-radius: 3.5% / 7%; }
+body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 3.5% / 7%; pointer-events: none; z-index: 6;
+  background: repeating-linear-gradient(rgba(0,0,0,.14) 0 1px, transparent 1px 3px),
               radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.12), transparent 50%);
-  box-shadow: inset 0 0 18px rgba(0,0,0,.6); }
-/* badge, floppy slot, vents, foot */
+  box-shadow: inset 0 0 18px rgba(0,0,0,.65); }
+
+/* badge: an engraved name under the tube's left edge */
+body[data-case="mac_se"] .c-b {
+  display: flex; align-items: center; left: 12.5%; width: 30%; top: 70%; height: 4%;
+  font: italic 500 2.2vh/1 "Apple Garamond", Garamond, "Hoefler Text", Georgia, serif; letter-spacing: .02em;
+  color: color-mix(in srgb, var(--se3) 80%, black); text-shadow: 0 1px 0 rgba(255,255,255,.6);
+}
+body[data-case="mac_se"] .c-b::after { content: "Flight Clock"; }
+/* floppy drive: a chamfered bezel, the slot, the eject pin-hole */
 body[data-case="mac_se"] .c-c {
-  display: block; left: 13%; top: 60%; width: 9%; height: 3.4%; border-radius: 2px;
-  background: linear-gradient(var(--se3), var(--se2)); box-shadow: inset 0 1px 2px rgba(0,0,0,.25);
+  display: block; left: 50%; right: 12%; top: 69.5%; height: 5.2%; box-sizing: border-box; border-radius: .6vh;
+  border-style: solid; border-width: 1vh 1.2vw .7vh;
+  border-color: var(--se3) var(--se2) color-mix(in srgb, var(--se) 50%, white) var(--se2);
+  background: linear-gradient(#141412, #2c2b28) padding-box;
+  box-shadow: 0 .2vh 0 rgba(255,255,255,.5), 0 -.15vh 0 rgba(0,0,0,.1);
 }
+body[data-case="mac_se"] .c-c::after { content: ""; position: absolute; right: -3.6vw; top: 55%; width: .9vw; height: .9vw;
+  border-radius: 50%; background: #3a3833; box-shadow: 0 1px 0 rgba(255,255,255,.55); }
+/* power/drive lamp, left of the slot */
 body[data-case="mac_se"] .c-d {
-  display: block; left: 52%; right: 13%; top: 64%; height: 3.4%; border-radius: 3px;
-  background: linear-gradient(#55534c, #2a2926); box-shadow: inset 0 2px 3px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.5);
+  display: block; left: 45%; top: 71.7%; width: 1.4vw; height: .7vh; border-radius: 1px;
+  background: #4e5b3a; box-shadow: inset 0 1px 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.5);
 }
-body[data-case="mac_se"] .c-d::after { content: ""; position: absolute; right: 4%; top: 30%; width: 9%; height: 40%; background: #8d8a82; border-radius: 1px; }
-body[data-case="mac_se"] .c-e {
-  display: block; left: 13%; right: 13%; top: 74%; height: 12%;
-  background: repeating-linear-gradient(90deg, transparent 0 9px, rgba(0,0,0,.18) 9px 11px, rgba(255,255,255,.35) 11px 12px, transparent 12px 21px);
-  -webkit-mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
-}
+/* the foot: the bottom band steps back, with a shadowed groove above it */
 body[data-case="mac_se"] .c-f {
-  display: block; left: 4%; right: 4%; bottom: 4%; height: 4%; border-radius: 0 0 22px 22px / 0 0 12px 12px;
-  background: linear-gradient(var(--se2), var(--se3)); box-shadow: inset 0 2px 2px rgba(0,0,0,.12);
+  display: block; left: 3%; right: 3%; bottom: 1.5%; height: 6.5%; border-radius: 0 0 3.2vw 3.2vw / 0 0 2.2vh 2.2vh;
+  background: var(--noise), linear-gradient(var(--se3), var(--se2) 30%, color-mix(in srgb, var(--se2) 85%, black));
+  box-shadow: inset 0 .5vh .6vh rgba(0,0,0,.28), 0 -1px 0 rgba(255,255,255,.55);
 }
 
 /* ============================ imac_g3: translucent gumdrop ============================ */
-body[data-case="imac_g3"] { --g3: #0aa1b4; --g3d: #046978; }
-body[data-case="imac_g3"][data-color="blueberry"] { --g3: #2463c6; --g3d: #133b80; }
-body[data-case="imac_g3"][data-color="strawberry"] { --g3: #e5485d; --g3d: #9c2032; }
-body[data-case="imac_g3"][data-color="lime"] { --g3: #79c043; --g3d: #467a1f; }
-body[data-case="imac_g3"][data-color="grape"] { --g3: #6b3fa0; --g3d: #40216a; }
-body[data-case="imac_g3"][data-color="tangerine"] { --g3: #f39233; --g3d: #b15a0e; }
-body[data-case="imac_g3"][data-color="graphite"] { --g3: #5e6066; --g3d: #303236; }
-body[data-case="imac_g3"][data-color="indigo"] { --g3: #3a3f9a; --g3d: #1f235f; }
-body[data-case="imac_g3"][data-color="ruby"] { --g3: #a51d33; --g3d: #640c1b; }
-body[data-case="imac_g3"][data-color="sage"] { --g3: #92b08a; --g3d: #5b7555; }
-body[data-case="imac_g3"][data-color="snow"] { --g3: #dfe8ee; --g3d: #a4b2bc; }
-body[data-case="imac_g3"][data-color="flower"] { --g3: #f2f0ea; --g3d: #b9b4a6; }
-body[data-case="imac_g3"][data-color="dalmatian"] { --g3: #eef2f6; --g3d: #9fb0c2; }
+/* A gumdrop shell (SVG mask: narrower, rounder top) of tinted translucent plastic:
+   deeper colour at the edges, fine vertical ribbing, glossy streaks, and the
+   insides showing through (chassis, speaker cones). The frosted "ice" face holds
+   a grey tube bezel; the coloured chin has the speakers, a slot-loading drive,
+   headphone jacks and the round power button. */
+body[data-case="imac_g3"] { --g3: #0aa1b4; --g3d: #04606e; --g3l: #7fd8e2; --ice: 236, 244, 247; }
+body[data-case="imac_g3"][data-color="blueberry"] { --g3: #2a6fd6; --g3d: #123a86; --g3l: #8fb7f2; }
+body[data-case="imac_g3"][data-color="strawberry"] { --g3: #e84a62; --g3d: #93172c; --g3l: #f7a4b1; }
+body[data-case="imac_g3"][data-color="lime"] { --g3: #7cc544; --g3d: #3f7518; --g3l: #c2ec9b; }
+body[data-case="imac_g3"][data-color="grape"] { --g3: #7445ae; --g3d: #3b1c66; --g3l: #bc9ce4; }
+body[data-case="imac_g3"][data-color="tangerine"] { --g3: #f7922e; --g3d: #a94f06; --g3l: #fcc994; }
+body[data-case="imac_g3"][data-color="graphite"] { --g3: #6a6d74; --g3d: #2c2e33; --g3l: #b3b6bd; --ice: 222, 226, 230; }
+body[data-case="imac_g3"][data-color="indigo"] { --g3: #3d43a8; --g3d: #1a1d5c; --g3l: #9a9fe6; }
+body[data-case="imac_g3"][data-color="ruby"] { --g3: #b01e38; --g3d: #5e0717; --g3l: #ec8496; }
+body[data-case="imac_g3"][data-color="sage"] { --g3: #94b38b; --g3d: #536e4c; --g3l: #d0e3ca; }
+body[data-case="imac_g3"][data-color="snow"] { --g3: #e3ebf0; --g3d: #9eaeb9; --g3l: #ffffff; }
+body[data-case="imac_g3"][data-color="flower"] { --g3: #f1efe9; --g3d: #b7b2a4; --g3l: #ffffff; }
+body[data-case="imac_g3"][data-color="dalmatian"] { --g3: #eef2f6; --g3d: #9db0c3; --g3l: #ffffff; }
+
+body[data-case="imac_g3"] {
+  --g3shape: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M50,.4 C66,.4 78,.8 85,1.6 C93,2.4 97.2,6.5 97.6,15 L99.3,80 C99.6,92 96.5,99.2 86,99.4 L14,99.4 C3.5,99.2 .4,92 .7,80 L2.4,15 C2.8,6.5 7,2.4 15,1.6 C22,.8 34,.4 50,.4 Z'/></svg>");
+  --g3gloss:
+    radial-gradient(ellipse 44% 6% at 50% 1.8%, rgba(255,255,255,.85), rgba(255,255,255,0)),
+    linear-gradient(90deg, transparent 2.2%, rgba(255,255,255,.5) 3.4%, transparent 6.5%, transparent 93.5%, rgba(255,255,255,.32) 96.6%, transparent 97.8%),
+    radial-gradient(ellipse 30% 22% at 12% 92%, rgba(255,255,255,.28), transparent 70%),
+    radial-gradient(ellipse 55% 9% at 50% 99%, var(--g3l), transparent);
+  --g3ribs: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 1px, transparent 1px 4px, rgba(0,0,0,.05) 4px 5px, transparent 5px 6px);
+}
+/* soft contact shadow under the foot */
+body[data-case="imac_g3"] #case::before { content: ""; position: absolute; left: 12%; right: 12%; bottom: 0; height: 5%; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0,0,0,.45), transparent 70%); }
 
 body[data-case="imac_g3"] .c-body {
-  display: block; left: 3%; right: 3%; top: 2%; bottom: 3%; border-radius: 16% 16% 26% 26% / 16% 16% 24% 24%;
+  display: block; left: 2%; right: 2%; top: 1%; bottom: 2.5%;
+  -webkit-mask: var(--g3shape) 0 0 / 100% 100% no-repeat; mask: var(--g3shape) 0 0 / 100% 100% no-repeat;
   background:
-    linear-gradient(100deg, rgba(255,255,255,.45), transparent 22%, transparent 78%, rgba(255,255,255,.25)),
-    repeating-linear-gradient(90deg, rgba(255,255,255,.0) 0 14px, rgba(255,255,255,.14) 14px 16px),
-    radial-gradient(ellipse 70% 50% at 50% 100%, var(--g3d), transparent 80%),
-    var(--g3);
-  box-shadow: 0 12px 22px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -10px 22px rgba(0,0,0,.18);
+    var(--g3gloss), var(--g3ribs),
+    radial-gradient(ellipse 72% 68% at 50% 42%, color-mix(in srgb, var(--g3) 70%, var(--g3l)) 0%, var(--g3) 55%, var(--g3d) 100%);
 }
-body[data-case="imac_g3"][data-color="flower"] .c-body {
+/* the insides, blurred through the plastic: the tube's housing and the chassis in the chin */
+body[data-case="imac_g3"] .c-body::before { content: ""; position: absolute; inset: 0; filter: blur(5px); opacity: .55;
   background:
-    linear-gradient(100deg, rgba(255,255,255,.4), transparent 25%),
-    radial-gradient(circle at 25% 25%, #f06aa4 0 9%, transparent 10%) 0 0 / 52px 52px,
-    radial-gradient(circle at 75% 30%, #ffd23a 0 8%, transparent 9%) 0 0 / 52px 52px,
-    radial-gradient(circle at 50% 75%, #57b7e8 0 9%, transparent 10%) 0 0 / 52px 52px,
-    radial-gradient(circle at 20% 70%, #8fd16a 0 7%, transparent 8%) 26px 13px / 52px 52px,
-    radial-gradient(circle at 70% 70%, #f5893a 0 7%, transparent 8%) 13px 26px / 52px 52px,
-    var(--g3);
+    radial-gradient(ellipse 46% 40% at 50% 38%, rgba(0,0,0,.45), transparent 75%),
+    radial-gradient(ellipse 36% 6% at 50% 91%, rgba(0,0,0,.22), transparent 70%); }
+/* the tinted rim: light passing through the shell's edge */
+body[data-case="imac_g3"] .c-body::after { content: ""; position: absolute; inset: 0;
+  box-shadow: inset 0 0 2.2vw var(--g3l), inset 0 0 .5vw rgba(255,255,255,.6); opacity: .7;
+  -webkit-mask: var(--g3shape) 0 0 / 100% 100% no-repeat; }
+
+body[data-case="imac_g3"][data-color="flower"] .c-body {
+  background: var(--g3gloss), var(--g3ribs),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'><g opacity='.85'><g transform='translate(22 24)'><g fill='%23f26aa6'><circle cx='0' cy='-9' r='7'/><circle cx='8.6' cy='-2.8' r='7'/><circle cx='5.3' cy='7.3' r='7'/><circle cx='-5.3' cy='7.3' r='7'/><circle cx='-8.6' cy='-2.8' r='7'/></g><circle r='4.5' fill='%23ffd23a'/></g><g transform='translate(66 64) rotate(30)'><g fill='%2357a9e8'><circle cx='0' cy='-8' r='6'/><circle cx='7.6' cy='-2.5' r='6'/><circle cx='4.7' cy='6.5' r='6'/><circle cx='-4.7' cy='6.5' r='6'/><circle cx='-7.6' cy='-2.5' r='6'/></g><circle r='4' fill='%23ffffff'/></g><g transform='translate(70 16) rotate(12)'><g fill='%23f5893a'><circle cx='0' cy='-5' r='4'/><circle cx='4.8' cy='-1.5' r='4'/><circle cx='3' cy='4' r='4'/><circle cx='-3' cy='4' r='4'/><circle cx='-4.8' cy='-1.5' r='4'/></g><circle r='2.5' fill='%23ffe680'/></g><g transform='translate(18 72) rotate(-20)'><g fill='%238fd16a'><circle cx='0' cy='-5' r='4'/><circle cx='4.8' cy='-1.5' r='4'/><circle cx='3' cy='4' r='4'/><circle cx='-3' cy='4' r='4'/><circle cx='-4.8' cy='-1.5' r='4'/></g><circle r='2.5' fill='%23ffffff'/></g></g></svg>") 0 0 / 28% auto,
+    radial-gradient(ellipse 72% 68% at 50% 42%, #ffffff 0%, var(--g3) 55%, var(--g3d) 100%);
 }
 body[data-case="imac_g3"][data-color="dalmatian"] .c-body {
-  background:
-    linear-gradient(100deg, rgba(255,255,255,.45), transparent 25%),
-    radial-gradient(circle at 30% 30%, #2c5d9c 0 9%, transparent 10%) 0 0 / 46px 46px,
-    radial-gradient(circle at 70% 60%, #2c5d9c 0 6%, transparent 7%) 0 0 / 46px 46px,
-    radial-gradient(circle at 40% 80%, #2c5d9c 0 7%, transparent 8%) 23px 11px / 46px 46px,
-    var(--g3);
+  background: var(--g3gloss), var(--g3ribs),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><g fill='%232a5a98' opacity='.85'><ellipse cx='14' cy='12' rx='6' ry='4.5' transform='rotate(-20 14 12)'/><ellipse cx='52' cy='8' rx='3.5' ry='3'/><ellipse cx='38' cy='34' rx='7' ry='5' transform='rotate(35 38 34)'/><ellipse cx='70' cy='40' rx='4' ry='5.5'/><ellipse cx='10' cy='50' rx='3' ry='2.5'/><ellipse cx='26' cy='66' rx='5.5' ry='4' transform='rotate(10 26 66)'/><ellipse cx='60' cy='70' rx='3' ry='3.5'/><ellipse cx='48' cy='56' rx='2' ry='1.8'/></g></svg>") 0 0 / 20% auto,
+    radial-gradient(ellipse 72% 68% at 50% 42%, #ffffff 0%, var(--g3) 55%, var(--g3d) 100%);
 }
-/* the frosted white face around the tube */
+
+/* the frosted ice face around the tube */
 body[data-case="imac_g3"] .c-a {
-  display: block; left: 8%; right: 8%; top: 6%; height: 62%; border-radius: 12% / 12%;
-  background: linear-gradient(rgba(248,250,251,.92), rgba(225,231,235,.88));
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.7), 0 2px 6px rgba(0,0,0,.18);
+  display: block; left: 8.5%; right: 8.5%; top: 5%; height: 64%; border-radius: 13% 13% 15% 15% / 14% 14% 17% 17%;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,0) 16%),
+    radial-gradient(ellipse 60% 30% at 50% 100%, rgba(255,255,255,.35), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.4) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(var(--ice), .93), rgba(var(--ice), .82));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), inset 0 0 1.8vw color-mix(in srgb, var(--g3) 55%, transparent),
+              inset 0 -.8vh 1.4vh color-mix(in srgb, var(--g3d) 25%, transparent), 0 .5vh 1.2vh rgba(0,0,0,.2);
 }
-/* the dark grey tube bezel */
+/* the grey tube bezel, sloping in to the glass */
 body[data-case="imac_g3"] .c-b {
-  display: block; left: 13%; right: 13%; top: 10.5%; height: 50%; border-radius: 7% / 8%;
-  background: radial-gradient(ellipse at 50% 45%, #2f3236, #17191b 75%);
-  box-shadow: inset 0 0 16px rgba(0,0,0,.9), 0 0 0 3px rgba(150,160,168,.55);
+  display: block; left: 12.5%; right: 12.5%; top: 9%; height: 54.5%; box-sizing: border-box; border-radius: 8% / 9.5%;
+  border-style: solid; border-width: 2.2vh 2.4vw 2.6vh;
+  border-color: #9aa3aa #b4bcc2 #d3d9dd #b4bcc2;
+  background: radial-gradient(ellipse 85% 80% at 50% 45%, #2e3236, #15171a 65%, #0a0b0c) padding-box;
+  box-shadow: 0 0 0 1px rgba(110,120,128,.6), 0 .25vh 0 1px rgba(255,255,255,.7), inset 0 0 2vw rgba(0,0,0,.9), inset 0 0 0 1px #050505;
 }
-body[data-case="imac_g3"] #well { left: 16.5%; width: 67%; top: 18.6%; height: 33.5%; }
-body[data-case="imac_g3"] #screen { border-radius: 8px / 12px; }
-body[data-case="imac_g3"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 8px / 12px; pointer-events: none; z-index: 6;
+body[data-case="imac_g3"] .c-b::after { content: ""; position: absolute; inset: 0; border-radius: 6% / 8%; pointer-events: none;
+  background: radial-gradient(ellipse 65% 40% at 30% 16%, rgba(255,255,255,.12), transparent 70%); }
+body[data-case="imac_g3"] #well { left: 18.5%; width: 63%; top: 20.75%; height: 31.5%; }
+body[data-case="imac_g3"] #screen { border-radius: 3% / 6%; }
+body[data-case="imac_g3"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 3% / 6%; pointer-events: none; z-index: 6;
   background: radial-gradient(ellipse at 30% 15%, rgba(255,255,255,.14), transparent 55%); box-shadow: inset 0 0 16px rgba(0,0,0,.5); }
-/* the coloured translucent chin with speaker grilles */
+
+/* speakers: perforated grilles seen through the coloured chin */
 body[data-case="imac_g3"] .c-c, body[data-case="imac_g3"] .c-d {
-  display: block; top: 74%; width: 15%; height: 10%; border-radius: 45%;
-  background: radial-gradient(circle, rgba(0,0,0,.35) 30%, transparent 36%) 0 0 / 6px 6px;
-  -webkit-mask: radial-gradient(ellipse, #000 60%, transparent 72%);
+  display: block; top: 71%; width: 17%; height: 14%; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--g3d) 70%, black) 34%, transparent 42%) 0 0 / .95vw .95vw;
+  opacity: .6; -webkit-mask: radial-gradient(ellipse closest-side, #000 72%, transparent 100%);
 }
-body[data-case="imac_g3"] .c-c { left: 16%; }
-body[data-case="imac_g3"] .c-d { right: 16%; }
+body[data-case="imac_g3"] .c-c { left: 11%; }
+body[data-case="imac_g3"] .c-d { right: 11%; }
+/* slot-loading drive */
 body[data-case="imac_g3"] .c-e {
-  display: block; left: 44%; width: 12%; top: 76%; height: 5.5%; border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 35%, rgba(255,255,255,.55), rgba(255,255,255,.12) 70%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
+  display: block; left: 36%; width: 28%; top: 75.5%; height: 1.3%; border-radius: 1vh;
+  background: linear-gradient(color-mix(in srgb, var(--g3d) 40%, black), color-mix(in srgb, var(--g3d) 75%, black));
+  box-shadow: 0 .3vh 0 rgba(255,255,255,.45), 0 -.2vh .3vh rgba(0,0,0,.2);
 }
-body[data-case="imac_g3"] .c-f {
-  display: block; left: 30%; right: 30%; top: 87%; height: 1.2%; border-radius: 4px; background: rgba(0,0,0,.25);
-}
+/* chin furniture: the power button (right) and two headphone jacks (left) */
+body[data-case="imac_g3"] .c-f { display: block; left: 0; right: 0; top: 70%; bottom: 0; pointer-events: none; }
+body[data-case="imac_g3"] .c-f::before { content: "⏻"; position: absolute; right: 19%; top: 58%; width: 4.4vw; height: 4.4vw; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font: 600 2.4vw/1 -apple-system, sans-serif; color: rgba(255,255,255,.75);
+  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.55), color-mix(in srgb, var(--g3) 80%, transparent) 60%, var(--g3d));
+  box-shadow: 0 0 0 .35vw color-mix(in srgb, var(--g3d) 45%, transparent), inset 0 -.3vw .5vw rgba(0,0,0,.25); }
+body[data-case="imac_g3"] .c-f::after { content: ""; position: absolute; left: 18%; top: 61%; width: 5.6vw; height: 2vw;
+  background: radial-gradient(circle at 1vw 1vw, #15171a 0 .45vw, rgba(255,255,255,.5) .5vw .62vw, transparent .66vw),
+              radial-gradient(circle at 4.4vw 1vw, #15171a 0 .45vw, rgba(255,255,255,.5) .5vw .62vw, transparent .66vw); }
