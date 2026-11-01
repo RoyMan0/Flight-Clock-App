@@ -285,11 +285,16 @@ body[data-case="imac_g3"] #screen { border-radius: 3% / 6%; }
 body[data-case="imac_g3"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 3% / 6%; pointer-events: none; z-index: 6;
   background: radial-gradient(ellipse at 30% 15%, rgba(255,255,255,.14), transparent 55%); box-shadow: inset 0 0 16px rgba(0,0,0,.5); }
 
-/* speakers: perforated grilles seen through the coloured chin */
+/* speakers: frosted ice discs, like the face, with the grille's perforations */
 body[data-case="imac_g3"] .c-c, body[data-case="imac_g3"] .c-d {
-  display: block; top: 71%; width: 17%; height: 14%; border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--g3d) 70%, black) 34%, transparent 42%) 0 0 / .95vw .95vw;
-  opacity: .6; -webkit-mask: radial-gradient(ellipse closest-side, #000 72%, transparent 100%);
+  display: block; top: 72%; width: 16%; height: 12.5%; border-radius: 50%;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,0) 30%),
+    radial-gradient(circle, rgba(70,80,90,.5) 30%, transparent 40%) 0 0 / .9vw .9vw,
+    repeating-linear-gradient(90deg, rgba(255,255,255,.4) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(var(--ice), .88), rgba(var(--ice), .74));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), inset 0 0 1.2vw color-mix(in srgb, var(--g3) 50%, transparent),
+              0 .3vh .8vh rgba(0,0,0,.18);
 }
 body[data-case="imac_g3"] .c-c { left: 11%; }
 body[data-case="imac_g3"] .c-d { right: 11%; }
@@ -297,7 +302,8 @@ body[data-case="imac_g3"] .c-d { right: 11%; }
 body[data-case="imac_g3"] .c-e {
   display: block; left: 36%; width: 28%; top: 75.5%; height: 1.3%; border-radius: 1vh;
   background: linear-gradient(color-mix(in srgb, var(--g3d) 40%, black), color-mix(in srgb, var(--g3d) 75%, black));
-  box-shadow: 0 .3vh 0 rgba(255,255,255,.45), 0 -.2vh .3vh rgba(0,0,0,.2);
+  box-shadow: 0 0 0 .55vw rgba(var(--ice), .8), 0 0 0 calc(.55vw + 1px) rgba(255,255,255,.85),
+              0 0 1vw calc(.55vw + 1px) color-mix(in srgb, var(--g3) 40%, transparent), 0 .4vh .8vh calc(.55vw + 1px) rgba(0,0,0,.15);
 }
 /* chin furniture: the power button (right) and two headphone jacks (left) */
 body[data-case="imac_g3"] .c-f { display: block; left: 0; right: 0; top: 70%; bottom: 0; pointer-events: none; }
