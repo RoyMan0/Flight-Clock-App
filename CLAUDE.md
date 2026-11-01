@@ -20,8 +20,16 @@ desktop/
   app.py               entry point: runtime.prepare() → shared bootstrap → Flask thread → display thread → Cocoa
   runtime.py           data dir, env vars, sys.path, logging, single-instance lock, port, relaunch
   shell.py             pywebview windows, NSStatusItem menu bar icon, menus, window levels, CoreLocation, update check
-  settings.py          Mac-only prefs (desktop.json): window_mode, level, led_style, bezel, glow, launch_at_login, lan_access
-  panel/index.html     LED renderer: polls GET /api/display/frame (raw 6,144 bytes) at 10 fps and draws LEDs on a <canvas>
+  settings.py          Mac-only prefs (desktop.json) + the SCREENS / CASES catalogue (names, colours, window sizes)
+  panel/               the panel window page (see "Display styles" below)
+    index.html         host page; css/panel.css (screens), css/cases.css (case art)
+    js/core.js         applies prefs, polls the app, feeds the active screen; ?fixture= preview mode
+    js/screens/        led.js (64×32 LEDs), flipboard.js (split flaps), eink.js (colour e-ink canvas)
+    js/board.js        the Board model (24×8 grid of cells) + helpers; js/layouts/<plugin>.js → Board
+    js/art.js          weather icons, world map / radar / ISS / pixel painters; js/world.js land outline
+    js/fixtures.js     sample describe() models for the gallery and tests
+    gallery.html       /desktop/gallery: every module × screen, every case × colour; "Use this style"
+    tests/run.sh       layout tests under JavaScriptCore (no Node)
   vendor/rgbmatrix/    no-op rgbmatrix stub (the Pi repo gitignores its own)
   version.py           __version__ and the GitHub repo checked for releases
 packaging/
@@ -89,6 +97,14 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
 - **Settings.** Mac prefs are separate from config.json, so the Pi schema never sees them.
   - They're edited from the "Mac App" card in `config.html`, which renders only when `desktop`, and from the menus.
   - Both paths use `Shell.set_prefs`, which applies them live. `lan_access` needs a restart (it changes the Flask bind host).
+- **Display styles.** Two independent prefs: `screen` (`led` · `flipboard` · `eink`) and `case` (`none` · `bedside` · `midcentury` · `mac_se` · `imac_g3`, plus `case_color`). Any screen works in any case.
+  - The LED screen draws `GET /api/display/frame`. Flip board and e-ink draw **high-res content**: they poll `GET /api/display/model` (each plugin's `describe()`, in core-src) at 4 Hz, run `FC.layouts[plugin](model, {now})` to get a Board, and draw it. Layouts re-run every 250 ms, so they page and tick on their own (the countdown's seconds, headline pages) without new models.
+  - A Board is cells on a 24×8 grid: `text` (h > 1 = big h×h characters), `icon`, `bar`, `graphic` (painters in `art.js`). Text that scrolled on the LED panel is paged. `B.pad()` results carry their alignment, which e-ink uses because it sets proportional type.
+  - No layout, or `describe()` returns None, or the model has `pixels: true` (maze): the board shows the panel's raw pixels, so a new Pi plugin still appears.
+  - Flip board: DOM flaps that step through the drum to the new character, with a top-left → bottom-right cascade on a page turn. E-ink: a canvas with a refresh flash on page turns, ≤ 1 update/s, and faint ghosting.
+  - **End animations on timers, never on `onfinish`/`animationend`.** WebKit pauses animations in hidden or covered windows (including offscreen snapshots), but timers keep running.
+  - Cases are pure CSS in `cases.css`, keyed by `body[data-case][data-color]`, with no Apple logos or names drawn. Each case's window size and ratio live in `settings.CASES`; `Shell._apply_case_size` reshapes the window around its top-left and locks the ratio. The screen inside (`#well`) stays 2:1, so update the `#well` percentages if you change a case's size.
+  - Adding a case colour: add it to `settings.CASES` **and** to `cases.css`. Adding a plugin layout: `js/layouts/<id>.js`, a `<script>` tag in `index.html`, a fixture in `js/fixtures.js`, then `desktop/panel/tests/run.sh`.
 - **Web server.** It binds to `127.0.0.1` on 8080, or a free port if 8080 is taken. With `lan_access` it binds to `0.0.0.0`; that's off by default, so there's no firewall prompt.
 
 ## Packaging gotchas
@@ -102,6 +118,7 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
 - **Signing.** The app is ad-hoc signed (required on Apple Silicon), so Gatekeeper rejects it until the user clicks Open Anyway. Setting `SIGN_IDENTITY` (and `NOTARY_PROFILE`) in `build.sh` switches to Developer ID with hardened runtime + notarization. No code changes are needed.
 - **Launch at login** (`SMAppService.mainAppService`) only works from the installed `.app`. In dev it reports "unavailable".
 - **Screenshots of the panel need Screen Recording permission.** To check rendering without it:
+  - Run `FLIGHTCLOCK_HEADLESS=1 .venv/bin/python desktop/app.py` (backend only, no windows), then render pages with an offscreen `WKWebView` via PyObjC (`takeSnapshotWithConfiguration`). That snapshots the page itself, so it needs no permission. `/desktop/panel?fixture=N&screen=…&case=…&color=…` previews any fixture.
   - Fetch `/api/display/frame` and convert the bytes with PIL: `Image.frombytes("RGB", (64, 32), data)`.
   - Exercise the panel JS with `/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc`, since there's no Node.
 

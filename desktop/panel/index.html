@@ -3,136 +3,45 @@
 <head>
 <meta charset="utf-8">
 <title>Flight Clock</title>
-<style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
-               -webkit-user-select: none; cursor: default; }
-  #frame { position: absolute; inset: 0; border-radius: 10px; background: #050505;
-           box-sizing: border-box; }
-  #frame.bezel { background: linear-gradient(#1c1c1f, #0c0c0e); padding: 2.2%;
-                 box-shadow: inset 0 0 0 1px #2a2a2e; }
-  #frame.bezel #screen { border-radius: 3px; }
-  #screen { position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; }
-  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  #glow { filter: blur(var(--glow, 6px)); opacity: .55; mix-blend-mode: screen; }
-  body.fs #frame { border-radius: 0; }
-  #offline { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-             color: #555; font: 600 12px -apple-system, sans-serif; letter-spacing: .08em; }
-</style>
+<link rel="stylesheet" href="/desktop/panel/css/panel.css">
+<link rel="stylesheet" href="/desktop/panel/css/cases.css">
 </head>
-<body>
-<div id="frame" class="bezel">
-  <div id="screen">
-    <canvas id="leds"></canvas>
-    <canvas id="glow"></canvas>
-    <div id="offline">STARTING…</div>
+<body data-screen="led" data-case="none" class="bezel">
+<div id="case">
+  <div class="c-body"></div>
+  <div class="c-a"></div><div class="c-b"></div><div class="c-c"></div>
+  <div class="c-d"></div><div class="c-e"></div><div class="c-f"></div>
+  <div id="well">
+    <div id="screen">
+      <canvas id="leds"></canvas>
+      <canvas id="glow"></canvas>
+      <div id="offline">STARTING…</div>
+    </div>
   </div>
 </div>
-<script>
-const W = 64, H = 32, FPS = 10;
-const leds = document.getElementById('leds');
-const glow = document.getElementById('glow');
-const ctx = leds.getContext('2d');
-const gctx = glow.getContext('2d');
-const scratch = new OffscreenCanvas(W, H);         // 1 px per LED, for the "sharp" style
-const sctx = scratch.getContext('2d');
-
-let prefs = { led_style: 'round', bezel: true, glow: true };
-let last = null;          // last frame bytes
-let brightness = 100;
-
-// Called by the app (evaluate_js) when settings change
-window.applyPrefs = (p) => {
-  prefs = { ...prefs, ...p };
-  document.getElementById('frame').classList.toggle('bezel', !!prefs.bezel);
-  glow.style.display = prefs.glow && prefs.led_style !== 'sharp' ? '' : 'none';
-  resize();
-};
-
-function resize() {
-  document.body.classList.toggle('fs', window.innerWidth >= screen.width - 1 && window.innerHeight >= screen.height - 1);
-  const r = leds.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-  for (const c of [leds, glow]) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
-  document.documentElement.style.setProperty('--glow', (Math.min(r.width, r.height * 2) / W * 0.55).toFixed(1) + 'px');
-  if (last) draw(last);
-}
-window.addEventListener('resize', resize);
-
-function draw(px) {
-  const cw = leds.width, ch = leds.height;
-  // Largest 2:1 area, centred: bezel padding and full screen never stretch the LEDs
-  const aw = Math.min(cw, ch * 2), ah = aw / 2, ox = (cw - aw) / 2, oy = (ch - ah) / 2;
-  // LED brightness 0–100 → never fully dark on screen, so a dimmed panel is still readable
-  const k = 0.3 + 0.7 * Math.max(0, Math.min(100, brightness)) / 100;
-  ctx.clearRect(0, 0, cw, ch);
-
-  if (prefs.led_style === 'sharp') {
-    const img = sctx.createImageData(W, H);
-    for (let i = 0, j = 0; i < px.length; i += 3, j += 4) {
-      img.data[j] = px[i] * k; img.data[j + 1] = px[i + 1] * k; img.data[j + 2] = px[i + 2] * k; img.data[j + 3] = 255;
-    }
-    sctx.putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(scratch, ox, oy, aw, ah);
-  } else {
-    const sx = aw / W, sy = ah / H, round = prefs.led_style === 'round';
-    const rad = Math.min(sx, sy) * 0.42, size = Math.min(sx, sy) * 0.84;
-    // Unlit LEDs first, in one path, so the grid is visible like on the real panel
-    ctx.fillStyle = '#151517';
-    ctx.beginPath();
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 3;
-      if (px[i] | px[i + 1] | px[i + 2]) continue;
-      const cx = ox + (x + 0.5) * sx, cy = oy + (y + 0.5) * sy;
-      if (round) { ctx.moveTo(cx + rad, cy); ctx.arc(cx, cy, rad, 0, 6.2832); }
-      else ctx.rect(cx - size / 2, cy - size / 2, size, size);
-    }
-    ctx.fill();
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 3, r = px[i], g = px[i + 1], b = px[i + 2];
-      if (!(r | g | b)) continue;
-      ctx.fillStyle = `rgb(${r * k | 0},${g * k | 0},${b * k | 0})`;
-      const cx = ox + (x + 0.5) * sx, cy = oy + (y + 0.5) * sy;
-      ctx.beginPath();
-      if (round) ctx.arc(cx, cy, rad, 0, 6.2832); else ctx.rect(cx - size / 2, cy - size / 2, size, size);
-      ctx.fill();
-    }
-  }
-  if (glow.style.display !== 'none') {
-    gctx.clearRect(0, 0, cw, ch);
-    gctx.drawImage(leds, 0, 0);
-  }
-}
-
-function same(a, b) {
-  if (!a || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-  return true;
-}
-
-async function poll() {
-  const t0 = performance.now();
-  try {
-    const r = await fetch('/api/display/frame', { cache: 'no-store' });
-    if (!r.ok) throw new Error(r.status);
-    const px = new Uint8Array(await r.arrayBuffer());
-    const b = parseInt(r.headers.get('X-Brightness') || '100', 10);
-    if (b !== brightness || !same(last, px)) { brightness = b; last = px; draw(px); }
-    document.getElementById('offline').style.display = 'none';
-  } catch (e) {
-    if (!last) document.getElementById('offline').style.display = 'flex';
-  }
-  setTimeout(poll, Math.max(0, 1000 / FPS - (performance.now() - t0)));
-}
-
-// Right-click → native menu; double-click → full screen
-document.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  if (window.pywebview) window.pywebview.api.context_menu();
-});
-document.addEventListener('dblclick', () => { if (window.pywebview) window.pywebview.api.toggle_fullscreen(); });
-
-fetch('/api/desktop/settings').then(r => r.json()).then(window.applyPrefs).catch(() => window.applyPrefs({}));
-poll();
-</script>
+<script src="/desktop/panel/js/board.js"></script>
+<script src="/desktop/panel/js/world.js"></script>
+<script src="/desktop/panel/js/art.js"></script>
+<script src="/desktop/panel/js/layouts/ai_usage.js"></script>
+<script src="/desktop/panel/js/layouts/ap_news.js"></script>
+<script src="/desktop/panel/js/layouts/calendar.js"></script>
+<script src="/desktop/panel/js/layouts/clock_weather.js"></script>
+<script src="/desktop/panel/js/layouts/event_countdown.js"></script>
+<script src="/desktop/panel/js/layouts/flight_tracker.js"></script>
+<script src="/desktop/panel/js/layouts/maze.js"></script>
+<script src="/desktop/panel/js/layouts/now_playing.js"></script>
+<script src="/desktop/panel/js/layouts/snow_report.js"></script>
+<script src="/desktop/panel/js/layouts/specific_flight_tracker.js"></script>
+<script src="/desktop/panel/js/layouts/sports.js"></script>
+<script src="/desktop/panel/js/layouts/stock_ticker.js"></script>
+<script src="/desktop/panel/js/layouts/system_stats.js"></script>
+<script src="/desktop/panel/js/layouts/transit.js"></script>
+<script src="/desktop/panel/js/layouts/world_clock.js"></script>
+<script src="/desktop/panel/js/layouts/world_daylight.js"></script>
+<script src="/desktop/panel/js/fixtures.js"></script>
+<script src="/desktop/panel/js/screens/led.js"></script>
+<script src="/desktop/panel/js/screens/flipboard.js"></script>
+<script src="/desktop/panel/js/screens/eink.js"></script>
+<script src="/desktop/panel/js/core.js"></script>
 </body>
 </html>

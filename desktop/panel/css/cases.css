@@ -1,0 +1,247 @@
+/* Cases: the window art around the screen. One block per case; body[data-case]
+   picks it and body[data-color] its colour. Everything is CSS (no images), and
+   positions are percentages of the window, whose shape the app keeps to the
+   case's size in desktop/settings.py CASES. The screen inside stays 2:1.
+   Decoration slots: .c-body (main shape), .c-a … .c-f (parts), #well (the screen's place). */
+
+#case > div { position: absolute; }
+.c-body, .c-a, .c-b, .c-c, .c-d, .c-e, .c-f { display: none; }   /* low specificity: each case shows its parts */
+#well { z-index: 2; }
+
+/* ============================ none: plain bezel ============================ */
+body[data-case="none"] #case { border-radius: 10px; background: #050505; overflow: hidden; }
+body[data-case="none"].bezel #case { background: linear-gradient(#1c1c1f, #0c0c0e); box-shadow: inset 0 0 0 1px #2a2a2e; }
+body[data-case="none"].bezel #well { inset: 2.2% 1.1%; }
+body[data-case="none"].bezel #screen { border-radius: 3px; }
+body.fs[data-case="none"] #case { border-radius: 0; }
+
+/* ======================= bedside: 80s/90s wood-grain clock ======================= */
+body[data-case="bedside"] { --wood: #5b3a21; --grain: #3c2412; --hi: rgba(255,230,200,.12); }
+body[data-case="bedside"][data-color="teak"] { --wood: #8a5530; --grain: #5e351a; }
+body[data-case="bedside"][data-color="oak"] { --wood: #b88a55; --grain: #8e6534; --hi: rgba(255,245,220,.2); }
+body[data-case="bedside"][data-color="black"] { --wood: #2a2522; --grain: #171311; --hi: rgba(255,255,255,.07); }
+
+body[data-case="bedside"] .c-body {
+  display: block; left: 1.5%; right: 1.5%; top: 13%; bottom: 3%; border-radius: 2.2% / 5%;
+  background:
+    linear-gradient(var(--hi), transparent 12%, transparent 85%, rgba(0,0,0,.35)),
+    repeating-linear-gradient(91deg, transparent 0 7px, rgba(0,0,0,.08) 7px 9px, transparent 9px 17px),
+    repeating-linear-gradient(88.5deg, transparent 0 23px, var(--grain) 23px 25px, transparent 25px 41px),
+    radial-gradient(ellipse 18% 9% at 74% 60%, var(--grain), transparent 70%),
+    radial-gradient(ellipse 25% 6% at 30% 30%, rgba(0,0,0,.18), transparent 70%),
+    var(--wood);
+  box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.35);
+}
+/* smoked acrylic front, over the screen */
+body[data-case="bedside"] .c-a {
+  display: block; left: 5.5%; width: 66%; top: 19%; bottom: 9%; border-radius: 1.4% / 3%;
+  background: #120c0a; box-shadow: inset 0 0 0 2px #0a0605, inset 0 3px 8px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.15);
+}
+body[data-case="bedside"] #well { left: 8%; width: 61%; top: 21%; height: 68.2%; }
+body[data-case="bedside"] #screen { border-radius: 4px; }
+body[data-case="bedside"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.13), transparent 38%, transparent 70%, rgba(120,40,30,.12));
+  box-shadow: inset 0 0 22px rgba(60,10,0,.55); z-index: 6; }
+/* snooze bar + buttons on top */
+body[data-case="bedside"] .c-b {
+  display: block; left: 18%; width: 40%; top: 4%; height: 10.5%; border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(#e9e2d4, #b9b0a0); box-shadow: inset 0 -3px 0 rgba(0,0,0,.2), 0 2px 3px rgba(0,0,0,.35);
+}
+body[data-case="bedside"] .c-b::after { content: "SNOOZE"; position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font: 700 9px/1 "Helvetica Neue", sans-serif; letter-spacing: .25em; color: #6d655a; }
+body[data-case="bedside"] .c-c {
+  display: block; left: 63%; width: 13%; top: 7%; height: 7.5%; border-radius: 5px 5px 1px 1px;
+  background: linear-gradient(#3a3532, #1b1816); box-shadow: inset 0 -2px 0 rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.4);
+}
+body[data-case="bedside"] .c-d {
+  display: block; left: 79%; width: 13%; top: 7%; height: 7.5%; border-radius: 5px 5px 1px 1px;
+  background: linear-gradient(#3a3532, #1b1816); box-shadow: inset 0 -2px 0 rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.4);
+}
+/* right-hand panel: speaker grille, alarm / PM lamps and a tuning dial */
+body[data-case="bedside"] .c-e {
+  display: block; left: 75%; width: 20.5%; top: 21%; height: 44%; border-radius: 6px;
+  background: radial-gradient(circle at 50% 50%, #0d0907 32%, transparent 36%) 0 0 / 9px 9px, #2b211b;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.12);
+}
+body[data-case="bedside"] .c-f {
+  display: block; left: 75%; width: 20.5%; top: 70%; height: 20%;
+  font: 600 8px/1 "Helvetica Neue", sans-serif; letter-spacing: .14em; color: rgba(255,240,220,.55);
+}
+body[data-case="bedside"] .c-f::before { content: "● ALARM    ● PM"; position: absolute; left: 4%; top: 18%; color: rgba(255,240,220,.55);
+  text-shadow: none; }
+body[data-case="bedside"] .c-f::after { content: ""; position: absolute; right: 6%; top: 0; width: 34%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d8d2c8, #8b847a 60%, #4c4640); box-shadow: 0 2px 3px rgba(0,0,0,.5); }
+body[data-case="bedside"][data-screen="led"] .c-f::before { text-shadow: 0 0 4px rgba(255,60,40,.0); }
+
+/* =========================== midcentury: desk clock =========================== */
+body[data-case="midcentury"] { --mc: #d6a127; --mc2: #a57812; --trim: #c9a45c; }
+body[data-case="midcentury"][data-color="teal"] { --mc: #2b8a85; --mc2: #1b625e; }
+body[data-case="midcentury"][data-color="orange"] { --mc: #c75a2a; --mc2: #93401b; }
+body[data-case="midcentury"][data-color="olive"] { --mc: #7d7f2e; --mc2: #5a5c1d; }
+body[data-case="midcentury"][data-color="cherry"] { --mc: #a8262e; --mc2: #7a161c; }
+body[data-case="midcentury"][data-color="cream"] { --mc: #efe5cb; --mc2: #cdbf9b; --trim: #b98f45; }
+
+body[data-case="midcentury"] .c-body {
+  display: block; left: 3%; right: 3%; top: 3%; height: 72%; border-radius: 22% / 32%;
+  background: radial-gradient(ellipse 80% 60% at 40% 25%, rgba(255,255,255,.28), transparent 60%),
+              linear-gradient(var(--mc), var(--mc2));
+  box-shadow: 0 10px 18px rgba(0,0,0,.35), inset 0 -6px 14px rgba(0,0,0,.25), inset 0 3px 3px rgba(255,255,255,.3);
+}
+/* brass trim ring around the screen */
+body[data-case="midcentury"] .c-a {
+  display: block; left: 12%; width: 76%; top: 11%; height: 56%; border-radius: 9% / 14%;
+  background: linear-gradient(135deg, #f6e2a8, var(--trim) 35%, #7e5f22 60%, #e6c983 85%);
+  box-shadow: 0 2px 4px rgba(0,0,0,.35), inset 0 0 0 1px rgba(0,0,0,.25);
+}
+body[data-case="midcentury"] .c-a::after { content: ""; position: absolute; inset: 3.5% 2.4%; border-radius: 8% / 12%; background: #121212;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,.9); }
+body[data-case="midcentury"] #well { left: 16%; width: 68%; top: 15.5%; height: 48.4%; }
+body[data-case="midcentury"] #screen { border-radius: 10px / 10px; }
+body[data-case="midcentury"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 10px; pointer-events: none; z-index: 6;
+  background: linear-gradient(170deg, rgba(255,255,255,.16), transparent 30%); }
+/* tapered walnut legs and a brass foot rail */
+body[data-case="midcentury"] .c-b, body[data-case="midcentury"] .c-c {
+  display: block; top: 69%; width: 5%; height: 29%; border-radius: 40% 40% 30% 30% / 8% 8% 6% 6%;
+  background: linear-gradient(90deg, #3b2414, #6e4524 45%, #3b2414);
+  box-shadow: 0 4px 6px rgba(0,0,0,.35);
+}
+body[data-case="midcentury"] .c-b { left: 20%; transform: rotate(12deg); transform-origin: 50% 0; }
+body[data-case="midcentury"] .c-c { right: 20%; transform: rotate(-12deg); transform-origin: 50% 0; }
+body[data-case="midcentury"] .c-b::after, body[data-case="midcentury"] .c-c::after { content: ""; position: absolute; left: 10%; right: 10%;
+  bottom: 0; height: 8%; border-radius: 0 0 40% 40%; background: linear-gradient(#f0d58d, #9a7330); }
+/* small brass nameplate */
+body[data-case="midcentury"] .c-d {
+  display: block; left: 40%; width: 20%; top: 67.5%; height: 3.6%; border-radius: 3px;
+  background: linear-gradient(#f6e2a8, #a98131); box-shadow: 0 1px 2px rgba(0,0,0,.35);
+  font: italic 600 9px/1 "Didot", "Bodoni 72", Georgia, serif; color: #4b3510; display: flex; align-items: center; justify-content: center;
+}
+body[data-case="midcentury"] .c-d::after { content: "Flight Clock"; }
+/* knobs on the sides */
+body[data-case="midcentury"] .c-e, body[data-case="midcentury"] .c-f {
+  display: block; top: 34%; width: 3.4%; aspect-ratio: 1 / 2.4; border-radius: 40%;
+  background: linear-gradient(90deg, #7e5f22, #f6e2a8 50%, #7e5f22); box-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+body[data-case="midcentury"] .c-e { left: 1.4%; }
+body[data-case="midcentury"] .c-f { right: 1.4%; }
+
+/* ============================ mac_se: compact all-in-one ============================ */
+body[data-case="mac_se"] { --se: #d7cfb8; --se2: #c4bba2; --se3: #b5ab90; }
+body[data-case="mac_se"][data-color="platinum"] { --se: #e3e2dc; --se2: #cfcdc5; --se3: #bdbab0; }
+
+body[data-case="mac_se"] .c-body {
+  display: block; left: 4%; right: 4%; top: 1.5%; bottom: 4%; border-radius: 5% / 4%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--se) 92%, white) 0%, var(--se) 8%, var(--se2) 100%);
+  box-shadow: 0 8px 16px rgba(0,0,0,.4), inset -6px 0 10px rgba(0,0,0,.08), inset 6px 0 10px rgba(255,255,255,.25);
+}
+/* the sunken bezel around the tube */
+body[data-case="mac_se"] .c-a {
+  display: block; left: 13%; right: 13%; top: 7%; height: 46%; border-radius: 6% / 5%;
+  background: linear-gradient(var(--se3), var(--se2));
+  box-shadow: inset 0 5px 10px rgba(0,0,0,.3), inset 0 -2px 3px rgba(255,255,255,.45);
+}
+/* the dark CRT glass (4:3), with the 2:1 screen in it */
+body[data-case="mac_se"] .c-b {
+  display: block; left: 18%; right: 18%; top: 10.5%; height: 39%; border-radius: 9% / 8%;
+  background: radial-gradient(ellipse at 50% 45%, #2b2d2c, #121413 70%);
+  box-shadow: inset 0 0 14px rgba(0,0,0,.9);
+}
+body[data-case="mac_se"] #well { left: 21%; width: 58%; top: 18.4%; height: 22.8%; }
+body[data-case="mac_se"] #screen { border-radius: 8px / 12px; }
+body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 8px / 12px; pointer-events: none; z-index: 6;
+  background: repeating-linear-gradient(rgba(0,0,0,.12) 0 1px, transparent 1px 3px),
+              radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.12), transparent 50%);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.6); }
+/* badge, floppy slot, vents, foot */
+body[data-case="mac_se"] .c-c {
+  display: block; left: 13%; top: 60%; width: 9%; height: 3.4%; border-radius: 2px;
+  background: linear-gradient(var(--se3), var(--se2)); box-shadow: inset 0 1px 2px rgba(0,0,0,.25);
+}
+body[data-case="mac_se"] .c-d {
+  display: block; left: 52%; right: 13%; top: 64%; height: 3.4%; border-radius: 3px;
+  background: linear-gradient(#55534c, #2a2926); box-shadow: inset 0 2px 3px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.5);
+}
+body[data-case="mac_se"] .c-d::after { content: ""; position: absolute; right: 4%; top: 30%; width: 9%; height: 40%; background: #8d8a82; border-radius: 1px; }
+body[data-case="mac_se"] .c-e {
+  display: block; left: 13%; right: 13%; top: 74%; height: 12%;
+  background: repeating-linear-gradient(90deg, transparent 0 9px, rgba(0,0,0,.18) 9px 11px, rgba(255,255,255,.35) 11px 12px, transparent 12px 21px);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+}
+body[data-case="mac_se"] .c-f {
+  display: block; left: 4%; right: 4%; bottom: 4%; height: 4%; border-radius: 0 0 22px 22px / 0 0 12px 12px;
+  background: linear-gradient(var(--se2), var(--se3)); box-shadow: inset 0 2px 2px rgba(0,0,0,.12);
+}
+
+/* ============================ imac_g3: translucent gumdrop ============================ */
+body[data-case="imac_g3"] { --g3: #0aa1b4; --g3d: #046978; }
+body[data-case="imac_g3"][data-color="blueberry"] { --g3: #2463c6; --g3d: #133b80; }
+body[data-case="imac_g3"][data-color="strawberry"] { --g3: #e5485d; --g3d: #9c2032; }
+body[data-case="imac_g3"][data-color="lime"] { --g3: #79c043; --g3d: #467a1f; }
+body[data-case="imac_g3"][data-color="grape"] { --g3: #6b3fa0; --g3d: #40216a; }
+body[data-case="imac_g3"][data-color="tangerine"] { --g3: #f39233; --g3d: #b15a0e; }
+body[data-case="imac_g3"][data-color="graphite"] { --g3: #5e6066; --g3d: #303236; }
+body[data-case="imac_g3"][data-color="indigo"] { --g3: #3a3f9a; --g3d: #1f235f; }
+body[data-case="imac_g3"][data-color="ruby"] { --g3: #a51d33; --g3d: #640c1b; }
+body[data-case="imac_g3"][data-color="sage"] { --g3: #92b08a; --g3d: #5b7555; }
+body[data-case="imac_g3"][data-color="snow"] { --g3: #dfe8ee; --g3d: #a4b2bc; }
+body[data-case="imac_g3"][data-color="flower"] { --g3: #f2f0ea; --g3d: #b9b4a6; }
+body[data-case="imac_g3"][data-color="dalmatian"] { --g3: #eef2f6; --g3d: #9fb0c2; }
+
+body[data-case="imac_g3"] .c-body {
+  display: block; left: 3%; right: 3%; top: 2%; bottom: 3%; border-radius: 16% 16% 26% 26% / 16% 16% 24% 24%;
+  background:
+    linear-gradient(100deg, rgba(255,255,255,.45), transparent 22%, transparent 78%, rgba(255,255,255,.25)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.0) 0 14px, rgba(255,255,255,.14) 14px 16px),
+    radial-gradient(ellipse 70% 50% at 50% 100%, var(--g3d), transparent 80%),
+    var(--g3);
+  box-shadow: 0 12px 22px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -10px 22px rgba(0,0,0,.18);
+}
+body[data-case="imac_g3"][data-color="flower"] .c-body {
+  background:
+    linear-gradient(100deg, rgba(255,255,255,.4), transparent 25%),
+    radial-gradient(circle at 25% 25%, #f06aa4 0 9%, transparent 10%) 0 0 / 52px 52px,
+    radial-gradient(circle at 75% 30%, #ffd23a 0 8%, transparent 9%) 0 0 / 52px 52px,
+    radial-gradient(circle at 50% 75%, #57b7e8 0 9%, transparent 10%) 0 0 / 52px 52px,
+    radial-gradient(circle at 20% 70%, #8fd16a 0 7%, transparent 8%) 26px 13px / 52px 52px,
+    radial-gradient(circle at 70% 70%, #f5893a 0 7%, transparent 8%) 13px 26px / 52px 52px,
+    var(--g3);
+}
+body[data-case="imac_g3"][data-color="dalmatian"] .c-body {
+  background:
+    linear-gradient(100deg, rgba(255,255,255,.45), transparent 25%),
+    radial-gradient(circle at 30% 30%, #2c5d9c 0 9%, transparent 10%) 0 0 / 46px 46px,
+    radial-gradient(circle at 70% 60%, #2c5d9c 0 6%, transparent 7%) 0 0 / 46px 46px,
+    radial-gradient(circle at 40% 80%, #2c5d9c 0 7%, transparent 8%) 23px 11px / 46px 46px,
+    var(--g3);
+}
+/* the frosted white face around the tube */
+body[data-case="imac_g3"] .c-a {
+  display: block; left: 8%; right: 8%; top: 6%; height: 62%; border-radius: 12% / 12%;
+  background: linear-gradient(rgba(248,250,251,.92), rgba(225,231,235,.88));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.7), 0 2px 6px rgba(0,0,0,.18);
+}
+/* the dark grey tube bezel */
+body[data-case="imac_g3"] .c-b {
+  display: block; left: 13%; right: 13%; top: 10.5%; height: 50%; border-radius: 7% / 8%;
+  background: radial-gradient(ellipse at 50% 45%, #2f3236, #17191b 75%);
+  box-shadow: inset 0 0 16px rgba(0,0,0,.9), 0 0 0 3px rgba(150,160,168,.55);
+}
+body[data-case="imac_g3"] #well { left: 16.5%; width: 67%; top: 18.6%; height: 33.5%; }
+body[data-case="imac_g3"] #screen { border-radius: 8px / 12px; }
+body[data-case="imac_g3"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 8px / 12px; pointer-events: none; z-index: 6;
+  background: radial-gradient(ellipse at 30% 15%, rgba(255,255,255,.14), transparent 55%); box-shadow: inset 0 0 16px rgba(0,0,0,.5); }
+/* the coloured translucent chin with speaker grilles */
+body[data-case="imac_g3"] .c-c, body[data-case="imac_g3"] .c-d {
+  display: block; top: 74%; width: 15%; height: 10%; border-radius: 45%;
+  background: radial-gradient(circle, rgba(0,0,0,.35) 30%, transparent 36%) 0 0 / 6px 6px;
+  -webkit-mask: radial-gradient(ellipse, #000 60%, transparent 72%);
+}
+body[data-case="imac_g3"] .c-c { left: 16%; }
+body[data-case="imac_g3"] .c-d { right: 16%; }
+body[data-case="imac_g3"] .c-e {
+  display: block; left: 44%; width: 12%; top: 76%; height: 5.5%; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 35%, rgba(255,255,255,.55), rgba(255,255,255,.12) 70%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
+}
+body[data-case="imac_g3"] .c-f {
+  display: block; left: 30%; right: 30%; top: 87%; height: 1.2%; border-radius: 4px; background: rgba(0,0,0,.25);
+}

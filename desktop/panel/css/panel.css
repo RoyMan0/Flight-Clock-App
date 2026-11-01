@@ -1,0 +1,66 @@
+/* Panel window: page frame and the three screens (LED, flip board, e-ink).
+   The cases (the window art around the screen) are in cases.css. */
+
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
+             -webkit-user-select: none; user-select: none; cursor: default; }
+
+#case { position: absolute; inset: 0; }
+#well { position: absolute; inset: 0; }
+#screen { position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; }
+#screen > canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#glow { filter: blur(var(--glow, 6px)); opacity: .55; mix-blend-mode: screen; }
+#offline { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+           color: #555; font: 600 12px -apple-system, sans-serif; letter-spacing: .08em; z-index: 5; }
+
+/* ---- flip board ------------------------------------------------------------ */
+body[data-screen="flipboard"] #screen { background: #0b0b0c; }
+.flipboard { position: absolute; inset: 0; perspective: 600px; }
+.flap, .ftile { position: absolute; }
+.ftile { z-index: 0; }
+.flap { z-index: 1; }
+.flap { --fh: 20px; font-family: "DIN Condensed", "Avenir Next Condensed", "Helvetica Neue", sans-serif;
+        font-weight: 700; }
+.flap .f-top, .flap .f-bot, .flap .lf { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden;
+        background: rgb(28, 28, 30); }
+.flap .f-top, .flap .lf-front { top: 0; border-radius: 2px 2px 0 0;
+        background-image: linear-gradient(rgba(255,255,255,.06), rgba(0,0,0,.18)); }
+.flap .f-bot, .flap .lf-back { bottom: 0; border-radius: 0 0 2px 2px;
+        background-image: linear-gradient(rgba(255,255,255,.03), rgba(0,0,0,.28)); }
+.flap span { position: absolute; left: 0; right: 0; height: var(--fh); line-height: calc(var(--fh) * 1.08);
+        text-align: center; font-size: calc(var(--fh) * .86); }
+.flap .f-top span, .flap .lf-front span { top: 0; }
+.flap .f-bot span, .flap .lf-back span { bottom: 0; }
+/* The hinge: a hairline gap between the halves */
+.flap::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - .5px); height: 1px;
+        background: rgba(0,0,0,.75); z-index: 3; }
+.flap .f-leaf { display: none; position: absolute; left: 0; right: 0; top: 0; height: 50%;
+        transform-origin: 50% 100%; transform-style: preserve-3d; z-index: 2; }
+.flap .f-leaf .lf { height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flap .f-leaf .lf-back { top: 0; bottom: auto; transform: rotateX(180deg); }
+.flap .f-leaf .lf-back span { top: auto; bottom: 0; }
+.flap.big { z-index: 2; }
+.flap.big .f-top, .flap.big .lf-front { border-radius: 4px 4px 0 0; }
+.flap.big .f-bot, .flap.big .lf-back { border-radius: 0 0 4px 4px; }
+
+.ftile .ft-face { position: absolute; inset: 0; border-radius: 3px; overflow: hidden;
+        background: linear-gradient(#1f1f21, #161618); transform-origin: 50% 50%; }
+.ftile .ft-face::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - .5px); height: 1px;
+        background: rgba(0,0,0,.6); }
+.ftile canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ftile img { position: absolute; inset: 6%; width: 88%; height: 88%; object-fit: contain; }
+.ftile img.photo { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ftile img.pixel { image-rendering: pixelated; inset: 8%; width: 84%; height: 84%; object-fit: contain; }
+
+/* ---- e-ink ------------------------------------------------------------------ */
+body[data-screen="eink"] #screen { background: #e8e4d8; }
+.eink { position: absolute; inset: 0; }
+.eink canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.eink-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.eink-flash.go { animation: eink-refresh .42s steps(1, end); }
+@keyframes eink-refresh {
+  0%   { opacity: 1; background: #1c1c1a; }
+  30%  { opacity: 1; background: #f1eee4; }
+  55%  { opacity: 1; background: #2a2a27; }
+  80%  { opacity: .6; background: #e8e4d8; }
+  100% { opacity: 0; }
+}

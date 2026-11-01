@@ -7,6 +7,8 @@ flight-clock-and-more repo) in software mode, and shows the 64×32 panel in a
 native window instead of on an LED matrix.
 
   Dev:    .venv/bin/python desktop/app.py
+  Headless (no windows; open the printed URL in a browser):
+          FLIGHTCLOCK_HEADLESS=1 .venv/bin/python desktop/app.py
   Built:  packaging/build.sh  →  dist/Flight Clock.app, dist/FlightClock-<version>.dmg
 """
 
@@ -15,6 +17,7 @@ import runtime
 runtime.prepare()      # data dir, env, sys.path, logging — before any shared code is imported
 
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -30,12 +33,25 @@ def _register_routes(app, shell):
 
     @app.get("/desktop/panel")
     def desktop_panel():
-        return send_from_directory(runtime.PANEL_DIR, "index.html")
+        return send_from_directory(runtime.PANEL_DIR, "index.html", max_age=0)
+
+    @app.get("/desktop/gallery")
+    def desktop_gallery():
+        """Every module on every screen, and every case, from sample data (for choosing a style)."""
+        return send_from_directory(runtime.PANEL_DIR, "gallery.html", max_age=0)
+
+    @app.get("/desktop/panel/<path:name>")
+    def desktop_panel_file(name):
+        if name.split("/")[0] not in ("js", "css"):
+            return ("", 404)
+        return send_from_directory(runtime.PANEL_DIR, name, max_age=0)
 
     @app.get("/api/desktop/settings")
     def desktop_settings_get():
         return jsonify({
             **shell.prefs,
+            "case_color": settings.case_color(shell.prefs),
+            "catalog": settings.catalog(),
             "version": __version__,
             "data_dir": runtime.DATA_DIR,
             "log_file": runtime.LOG_FILE,
@@ -71,6 +87,29 @@ def _lan_address():
         return None
     finally:
         s.close()
+
+
+class _HeadlessShell:
+    """Stands in for shell.Shell with FLIGHTCLOCK_HEADLESS=1: prefs only, no windows."""
+
+    def __init__(self, base_url):
+        import settings
+        self._settings = settings
+        self.base_url, self.lan_url = base_url, None
+        self.prefs = settings.load()
+
+    def set_prefs(self, **changes):
+        self.prefs = self._settings.update(changes)
+        return self.prefs
+
+    def launch_at_login_status(self):
+        return "unavailable"
+
+    def relaunch(self):
+        log.info("[desktop] headless: restart requested (ignored)")
+
+    def locate(self):
+        return None
 
 
 def main():
@@ -122,7 +161,11 @@ def main():
         register_plugins(pm, display, cfg, plugin_classes)
         app = create_app(cfg, display, pm)
 
-    sh = shell_mod.Shell(f"http://127.0.0.1:{port}", pm=pm, setup_mode=setup_mode, lan_url=lan_url)
+    headless = os.environ.get("FLIGHTCLOCK_HEADLESS") == "1"
+    if headless:
+        sh = _HeadlessShell(f"http://127.0.0.1:{port}")
+    else:
+        sh = shell_mod.Shell(f"http://127.0.0.1:{port}", pm=pm, setup_mode=setup_mode, lan_url=lan_url)
     app.restart_cb = sh.relaunch
     app.locate_cb = sh.locate
     _register_routes(app, sh)
@@ -136,6 +179,9 @@ def main():
     if pm:
         threading.Thread(target=pm.run, daemon=True, name="display-loop").start()
 
+    if headless:
+        print(f"Flight Clock headless: http://127.0.0.1:{port}/desktop/panel", flush=True)
+        threading.Event().wait()
     sh.run()          # Cocoa main loop; returns when the app quits
     log.info("[desktop] bye")
 

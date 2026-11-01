@@ -34,7 +34,6 @@ from version import __version__, RELEASES_REPO
 
 log = logging.getLogger("desktop.shell")
 
-PANEL_SIZE = (640, 320)
 
 # Names as the web UI shows them (web/templates/base.html PLUGIN_NAMES)
 PLUGIN_NAMES = {
@@ -161,9 +160,10 @@ class Shell:
             self.settings_win = webview.create_window(
                 "Flight Clock Setup", f"{self.base_url}/setup", width=760, height=860, min_size=(480, 600))
         else:
+            case = settings.CASES[self.prefs["case"]]
             self.panel = webview.create_window(
                 "Flight Clock", f"{self.base_url}/desktop/panel", js_api=PanelApi(self),
-                width=PANEL_SIZE[0], height=PANEL_SIZE[1], min_size=(256, 128),
+                width=case["size"][0], height=case["size"][1], min_size=case["min"],
                 frameless=True, easy_drag=True, transparent=True, background_color="#000000",
                 hidden=self.prefs["window_mode"] == "menubar",
             )
@@ -184,6 +184,7 @@ class Shell:
             win = self.panel.native
             win.setCollectionBehavior_(AppKit.NSWindowCollectionBehaviorFullScreenPrimary)
             self._restore_panel_frame()
+            self._apply_case_size(resize=False)
             Foundation.NSNotificationCenter.defaultCenter().addObserver_selector_name_object_(
                 self._target, "panelResignedKey:", AppKit.NSWindowDidResignKeyNotification, win)
             self.panel.events.moved += lambda *a: self._save_panel_frame_soon()
@@ -283,12 +284,7 @@ class Shell:
             for value, title in (("normal", "Normal Window"), ("floating", "Always on Top"),
                                  ("desktop", "On the Desktop (behind windows)")):
                 self._item(sub, title, lambda v=value: self.set_prefs(level=v), checked=p["level"] == value)
-            sub = self._submenu(m, "LED Style")
-            for value, title in (("round", "Round LEDs"), ("square", "Square LEDs"), ("sharp", "Sharp Pixels")):
-                self._item(sub, title, lambda v=value: self.set_prefs(led_style=v), checked=p["led_style"] == value)
-            sub.addItem_(AppKit.NSMenuItem.separatorItem())
-            self._item(sub, "Bezel", lambda: self.set_prefs(bezel=not p["bezel"]), checked=p["bezel"])
-            self._item(sub, "Glow", lambda: self.set_prefs(glow=not p["glow"]), checked=p["glow"])
+            self._style_menu(self._submenu(m, "Style"), p)
             self._item(m, "Full Screen", self.toggle_fullscreen)
             m.addItem_(AppKit.NSMenuItem.separatorItem())
             self._item(m, "Open in Browser", lambda: self._open_url(self.base_url))
@@ -374,6 +370,55 @@ class Shell:
             if not (win.styleMask() & AppKit.NSWindowStyleMaskFullScreen):
                 self.hide_panel()
 
+    def _style_menu(self, sub, p):
+        """Style ▸ screen, case, case colour, and the options of each."""
+        for value, title in settings.SCREENS.items():
+            self._item(sub, title, lambda v=value: self.set_prefs(screen=v), checked=p["screen"] == value)
+        sub.addItem_(AppKit.NSMenuItem.separatorItem())
+        for value, case in settings.CASES.items():
+            self._item(sub, case["name"], lambda v=value: self.set_prefs(case=v), checked=p["case"] == value)
+        colors = settings.CASES[p["case"]]["colors"]
+        if colors:
+            current = settings.case_color(p)
+            col = self._submenu(sub, "Colour")
+            for value, title in colors.items():
+                self._item(col, title, lambda v=value: self.set_prefs(case_color=v), checked=current == value)
+        sub.addItem_(AppKit.NSMenuItem.separatorItem())
+        if p["screen"] == "led":
+            for value, title in (("round", "Round LEDs"), ("square", "Square LEDs"), ("sharp", "Sharp Pixels")):
+                self._item(sub, title, lambda v=value: self.set_prefs(led_style=v), checked=p["led_style"] == value)
+            self._item(sub, "Glow", lambda: self.set_prefs(glow=not p["glow"]), checked=p["glow"])
+        if p["screen"] == "flipboard":
+            self._item(sub, "Flip Sound", lambda: self.set_prefs(flip_sound=not p["flip_sound"]),
+                       checked=p["flip_sound"])
+        if p["case"] == "none":
+            self._item(sub, "Bezel", lambda: self.set_prefs(bezel=not p["bezel"]), checked=p["bezel"])
+
+    def _apply_case_size(self, resize=True):
+        """Keep the window to the case's shape; on a case change, reshape it around its top-left."""
+        if not self.panel or not self.panel.native:
+            return
+        win = self.panel.native
+        case = settings.CASES[self.prefs["case"]]
+        w, h = case["size"]
+        win.setContentAspectRatio_(Foundation.NSMakeSize(w, h))
+        win.setContentMinSize_(Foundation.NSMakeSize(*case["min"]))
+        if not resize or win.styleMask() & AppKit.NSWindowStyleMaskFullScreen:
+            return
+        f = win.frame()
+        scale = ((f.size.width * f.size.height) / (w * h)) ** 0.5      # about the same screen area
+        nw = max(case["min"][0], round(w * scale))
+        nh = round(nw * h / w)
+        top = f.origin.y + f.size.height
+        win.setFrame_display_animate_(Foundation.NSMakeRect(f.origin.x, top - nh, nw, nh), True, True)
+        self._save_panel_frame_soon()
+
+    def look(self) -> dict:
+        """The prefs the panel page draws with (window.applyPrefs)."""
+        p = self.prefs
+        return {**{k: p[k] for k in ("screen", "case", "flip_sound", "led_style", "bezel", "glow")},
+                "case_color": settings.case_color(p)}
+
     def _restore_panel_frame(self):
         frame = self.prefs.get("panel_frame")
         if not frame or len(frame) != 4:
@@ -413,10 +458,11 @@ class Shell:
         if self.panel and old["window_mode"] == "menubar" and self.prefs["window_mode"] == "window":
             AppHelper.callAfter(self._restore_panel_frame)     # back from under the menu bar icon
         AppHelper.callAfter(self._apply_window_prefs)
+        if self.panel and self.prefs["case"] != old["case"]:
+            AppHelper.callAfter(self._apply_case_size)
         if self.panel:
-            look = {k: self.prefs[k] for k in ("led_style", "bezel", "glow")}
             try:
-                self.panel.evaluate_js(f"window.applyPrefs && window.applyPrefs({json.dumps(look)})")
+                self.panel.evaluate_js(f"window.applyPrefs && window.applyPrefs({json.dumps(self.look())})")
             except Exception:
                 pass
         return self.prefs

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Flight Clock — Styles</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font: 13px/1.4 -apple-system, "Helvetica Neue", sans-serif; background: #f2f1ee; color: #222; }
+  @media (prefers-color-scheme: dark) { body { background: #1d1d1f; color: #eee; } .card { background: #2a2a2d !important; } }
+  header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+           padding: 12px 18px; background: inherit; border-bottom: 1px solid rgba(128,128,128,.25); }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  label { display: flex; gap: 6px; align-items: center; }
+  select, button { font: inherit; padding: 4px 8px; border-radius: 6px; }
+  button.primary { background: #0a84ff; color: white; border: 0; padding: 5px 12px; }
+  .tabs button { border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit; }
+  .tabs button.on { background: rgba(10,132,255,.15); border-color: #0a84ff; }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--w, 340px), 1fr)); gap: 16px; padding: 18px; }
+  .card { background: white; border-radius: 10px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .card .name { font-weight: 600; margin: 0 0 6px; display: flex; justify-content: space-between; gap: 8px; }
+  .card .name small { font-weight: 400; opacity: .6; }
+  .frame { position: relative; width: 100%; }
+  .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+  #note { opacity: .65; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>✈ Styles</h1>
+  <div class="tabs"><button data-tab="modules" class="on">Every module</button> <button data-tab="cases">Every case</button></div>
+  <label>Screen <select id="screen"></select></label>
+  <label>Case <select id="case"></select></label>
+  <label>Colour <select id="color"></select></label>
+  <button class="primary" id="use">Use this style</button>
+  <span id="note">Sample data. Changes apply to the panel straight away.</span>
+</header>
+<main id="grid"></main>
+<script src="/desktop/panel/js/fixtures.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let catalog = null, tab = 'modules';
+
+  function opts(sel, items, value) {
+    sel.innerHTML = items.map((i) => `<option value="${i.id}"${i.id === value ? ' selected' : ''}>${i.name}</option>`).join('');
+  }
+  const caseOf = (id) => catalog.cases.find((c) => c.id === id);
+
+  function colours() {
+    const c = caseOf($('case').value);
+    opts($('color'), c.colors.length ? c.colors : [{ id: '', name: '—' }], $('color').value);
+    $('color').disabled = !c.colors.length;
+  }
+
+  function card(title, sub, src, size) {
+    const d = document.createElement('div');
+    d.className = 'card';
+    d.innerHTML = `<div class="name">${title}<small>${sub || ''}</small></div>
+      <div class="frame" style="aspect-ratio:${size[0]}/${size[1]}"><iframe loading="lazy" src="${src}"></iframe></div>`;
+    return d;
+  }
+
+  function url(fixture, screen, kase, color) {
+    return `/desktop/panel?fixture=${fixture}&screen=${screen}&case=${kase}&color=${color}`;
+  }
+
+  function render() {
+    const grid = $('grid');
+    grid.innerHTML = '';
+    const screen = $('screen').value, kase = $('case').value, color = $('color').value;
+    if (tab === 'modules') {
+      const size = caseOf(kase).size;
+      grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '340px' : '260px');
+      FC.FIXTURES.forEach((f, i) => grid.appendChild(card(f.label, f.plugin, url(i, screen, kase, color), size)));
+    } else {
+      grid.style.setProperty('--w', '280px');
+      for (const c of catalog.cases) {
+        for (const col of c.colors.length ? c.colors : [{ id: '', name: '' }])
+          grid.appendChild(card(c.name, col.name, url(0, screen, c.id, col.id), c.size));
+      }
+    }
+  }
+
+  document.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+    render();
+  });
+  $('screen').onchange = render;
+  $('case').onchange = () => { colours(); render(); };
+  $('color').onchange = render;
+  $('use').onclick = async () => {
+    const r = await fetch('/api/desktop/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ screen: $('screen').value, case: $('case').value, case_color: $('color').value }) });
+    $('note').textContent = r.ok ? 'Applied to the panel.' : 'Could not apply (is the app running?)';
+  };
+
+  fetch('/api/desktop/settings').then((r) => r.json()).then((s) => {
+    catalog = s.catalog;
+    opts($('screen'), catalog.screens, s.screen === 'led' ? 'flipboard' : s.screen);
+    opts($('case'), catalog.cases, s.case);
+    colours();
+    $('color').value = s.case_color || $('color').value;
+    render();
+  });
+</script>
+</body>
+</html>
