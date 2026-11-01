@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Flight Clock for Mac** is a standalone `.app` (shipped as a drag-to-Applications DMG) that runs the Raspberry Pi LED flight clock on a Mac. The Pi version needs a 64×32 RGB LED panel; the Mac app shows that panel in a window.
+**Flight Clock for Mac and Windows** runs the Raspberry Pi LED flight clock on a computer. The Pi version needs a 64×32 RGB LED panel; the desktop app shows that panel in a window.
+- Mac: a standalone `.app`, shipped as a drag-to-Applications DMG.
+- Windows: an Inno Setup installer plus a portable zip, built on GitHub Actions (an `.exe` can't be built on a Mac).
 
 There is **one plugin codebase**: `core-src/` is the Pi repo (`RoyMan0/flight-clock-and-more`), and it has its own detailed CLAUDE.md. This repo adds only:
-- the native shell
+- the native shells (Mac, Windows)
 - packaging
 
 New Pi plugins reach the Mac app by updating `core-src/`. Never fork plugin code into this repo. Fix it upstream, keeping it Pi-safe.
@@ -19,7 +21,10 @@ core-src/              the Pi repo as a git submodule, tracking its main branch
 desktop/
   app.py               entry point: runtime.prepare() → shared bootstrap → Flask thread → display thread → Cocoa
   runtime.py           data dir, env vars, sys.path, logging, single-instance lock, port, relaunch
-  shell.py             pywebview windows, NSStatusItem menu bar icon, menus, window levels, CoreLocation, update check
+  shell_common.py      ShellBase: the menu as a platform-neutral model, look(), module control, update check
+  shell_mac.py         Mac: pywebview windows, NSStatusItem menu bar icon, NSMenu, window levels, CoreLocation
+  shell_win.py         Windows: pywebview (WinForms + WebView2) windows, tray, window levels, winrt location
+  win_tray.py          the Windows tray icon + popup menu, straight on Win32 via ctypes
   settings.py          Mac-only prefs (desktop.json) + the SCREENS / CASES catalogue (names, colours, window sizes)
   panel/               the panel window page (see "Display styles" below)
     index.html         host page; css/panel.css (screens), css/cases.css (case art)
@@ -33,12 +38,19 @@ desktop/
   vendor/rgbmatrix/    no-op rgbmatrix stub (the Pi repo gitignores its own)
   version.py           __version__ and the GitHub repo checked for releases
 packaging/
-  build.sh             uv venv → make_art.py → PyInstaller → codesign → dmgbuild
-  FlightClock.spec     PyInstaller spec (arm64, onedir BUNDLE)
+  bundle.py            what ships (asset allowlist + module list), shared by both specs
+  build.sh             Mac: uv venv → make_art.py → PyInstaller → codesign → dmgbuild
+  FlightClock.spec     Mac PyInstaller spec (arm64, onedir BUNDLE)
+  build-win.ps1        Windows: uv venv → make_art.py → PyInstaller → audit → zip → Inno Setup
+  FlightClock-win.spec Windows PyInstaller spec (x64, onedir, UTF-8 mode)
+  installer.iss        Inno Setup script (per-user install, no admin prompt)
+  smoke-win.ps1        headless smoke test of the built Windows app (CI runs it)
   dmg_settings.py      dmgbuild layout
-  make_art.py          draws icon.icns + DMG background into packaging/art/ (gitignored)
+  make_art.py          draws icon.icns, icon.ico + DMG background into packaging/art/ (gitignored)
   entitlements.plist   only used when signing with a Developer ID
-  README-first-launch.md   install instructions for friends (Open Anyway)
+  README-first-launch.md          Mac install instructions for friends (Open Anyway)
+  README-first-launch-windows.md  Windows install instructions (SmartScreen: Run anyway)
+.github/workflows/windows.yml     builds + smoke-tests the Windows app on every push to main; v* tags attach it to the release
 ```
 
 ## Working with the submodule
@@ -65,37 +77,41 @@ packaging/build.sh        # → dist/Flight Clock.app, dist/FlightClock-<version
 FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight Clock"
 ```
 
+- Windows (on a PC): `powershell -ExecutionPolicy Bypass -File packaging\build-win.ps1` → `dist\Flight Clock\`, `dist\FlightClock-Setup-<version>.exe`, `dist\FlightClock-<version>-portable.zip`. Dev run: `.venv\Scripts\python desktop\app.py` (it restarts itself in Python's UTF-8 mode). From the Mac, push and download the artifact from the "Windows build" Actions run (`gh run download`).
 - Use the uv-managed **arm64** Python 3.12 in `.venv`. `/usr/local/bin/python3` and `/usr/local` Homebrew are Intel builds running under Rosetta.
-- To release: bump `desktop/version.py`, run `build.sh`, and upload the DMG to a GitHub Release on `RELEASES_REPO` with tag `v<version>`. The app's update check reads `releases/latest` and links to the first `.dmg` asset.
+- To release: bump `desktop/version.py`, run `build.sh`, and upload the DMG to a GitHub Release on `RELEASES_REPO` with tag `v<version>`; pushing the tag makes the Windows workflow attach the installer and zip. The update check reads `releases/latest` and links to the first `.dmg` (Mac) or `.exe` (Windows) asset.
 
 ## How it fits together
 
 - **Writable data.** The bundle is read-only, so `runtime.prepare()` sets these before any shared code is imported:
-  - `FLIGHTCLOCK_DATA_DIR=~/Library/Application Support/Flight Clock` and `FLIGHTCLOCK_DESKTOP=1`
+  - `FLIGHTCLOCK_DATA_DIR=~/Library/Application Support/Flight Clock` (Windows: `%APPDATA%\Flight Clock`) and `FLIGHTCLOCK_DESKTOP=1`
   - `chdir` into that folder
-  - Logs go to `~/Library/Logs/Flight Clock/flightclock.log`.
+  - Logs go to `~/Library/Logs/Flight Clock/flightclock.log` (Windows: `%LOCALAPPDATA%\Flight Clock\Logs`).
 
   The shared code reads these through `core-src/utilities/paths.py`:
   - `APP_ROOT` for assets
   - `DATA_ROOT` for anything written
-  - `DESKTOP` for the platform flag
+  - `DESKTOP` for the platform flag, `DESKTOP_OS` (`mac` / `windows`). Templates get `desktop_os` and `pc` ("Mac" / "PC") for wording.
+- **Two shells, one menu.** `app.py` picks `shell_mac` or `shell_win`. Both subclass `shell_common.ShellBase`, whose `menu_model()` returns `Item`s that each shell draws natively (NSMenu; Win32 popup menu in `win_tray.py`). Change menus in `shell_common`, not per platform.
 - **First run.** `location.location_home == [0, 0]` means setup mode. The app serves only the Pi's setup wizard (`create_app(setup_mode=True)`) in a window.
   - In desktop mode the wizard has no WiFi step, and its timezone field is hidden.
-  - "Use my Mac's location" calls `POST /setup/locate`, which goes to `app.locate_cb` = `Shell.locate`, which uses CoreLocation.
+  - "Use my Mac's/PC's location" calls `POST /setup/locate`, which goes to `app.locate_cb` = `Shell.locate`: CoreLocation on the Mac, winrt `Geolocator` on Windows.
   - "Save & Start" → `/setup/finish` → `app.restart_cb` = `Shell.relaunch`.
-- **Relaunch.** `runtime.spawn_relaunch()` starts `sh -c 'sleep 1; open -n <bundle>'` (or re-execs the dev script), then the app quits. The new copy waits up to 6 s for the instance lock. The web UI's Restart Application uses the same hook.
+- **Relaunch.** `runtime.spawn_relaunch()` starts `sh -c 'sleep 1; open -n <bundle>'` (Windows: a detached copy of the exe; dev: re-runs the script), then the app quits. The new copy waits up to 6 s for the instance lock. The web UI's Restart Application uses the same hook.
 - **Threads.** Cocoa (pywebview) owns the main thread. Flask and `PluginManager.run()` run on daemon threads.
   - Any AppKit call from another thread goes through `AppHelper.callAfter`.
   - pywebview's `js_api` methods also run off the main thread.
-- **Quitting.** `shell._patch_app_delegate` adds two methods to pywebview's `AppDelegate`:
+- **Threads (Windows).** WinForms (pywebview) owns the main thread. pywebview's window methods are thread-safe; anything touching the `Form` goes through `shell_win._run_on_ui`. The tray runs its own message loop on a daemon thread.
+- **Quitting.** `shell_mac._patch_app_delegate` adds two methods to pywebview's `AppDelegate`:
   - `applicationShouldTerminate:` makes Cmd-Q quit. Without it, the panel's "hide instead of close" handler would cancel termination.
   - `applicationShouldHandleReopen:` makes a Dock-icon click show the panel.
 - **Window modes.**
   - `window` = Regular activation policy (Dock icon).
   - `menubar` = Accessory policy (no Dock icon). The panel is positioned under the status item and hides when it loses key focus.
   - Levels: normal, floating, and desktop. Desktop is `kCGDesktopIconWindowLevel + 1` and joins all Spaces.
+  - Windows: `menubar` = "Tray only": the panel gets `WS_EX_TOOLWINDOW` (no taskbar button), pops up beside the tray and hides on `Deactivate`. Desktop level = `HWND_BOTTOM`, re-applied on every activation. Windows has no aspect-ratio lock, so `_keep_ratio` fixes the height after a resize settles.
 - **Settings.** Mac prefs are separate from config.json, so the Pi schema never sees them.
-  - They're edited from the "Mac App" card in `config.html`, which renders only when `desktop`, and from the menus.
+  - They're edited from the "Mac App" / "Windows App" card in `config.html`, which renders only when `desktop`, and from the menus.
   - Both paths use `Shell.set_prefs`, which applies them live. `lan_access` needs a restart (it changes the Flask bind host).
 - **Display styles.** Two independent prefs: `screen` (`led` · `flipboard` · `eink`) and `case` (`none` · `bedside` · `midcentury` · `mac_se` · `imac_g3`, plus `case_color`). Any screen works in any case.
   - The LED screen draws `GET /api/display/frame`. Flip board and e-ink draw **high-res content**: they poll `GET /api/display/model` (each plugin's `describe()`, in core-src) at 4 Hz, run `FC.layouts[plugin](model, {now})` to get a Board, and draw it. Layouts re-run every 250 ms, so they page and tick on their own (the countdown's seconds, headline pages) without new models.
@@ -108,6 +124,12 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
 - **Web server.** It binds to `127.0.0.1` on 8080, or a free port if 8080 is taken. With `lan_access` it binds to `0.0.0.0`; that's off by default, so there's no firewall prompt.
 
 ## Packaging gotchas
+
+- **Windows-specific:**
+  - The built exe runs in Python's **UTF-8 mode** (`("X utf8", None, "OPTION")` in the spec): the shared code opens text files without an encoding, which on Windows means cp1252. Dev runs restart themselves with `PYTHONUTF8=1`.
+  - No `%-d` in `strftime`, no `os.getuid`, no `sh -c` on Windows. Keep new shared code free of them (or guarded by `sys.platform`).
+  - pywebview needs the Edge **WebView2 Runtime** (built into Windows 11; most Windows 10 PCs have it). The installer and the app both offer the download link when it's missing.
+  - Unsigned: SmartScreen warns until the user clicks More info → Run anyway. A code-signing certificate would remove that.
 
 - **Asset allowlist.** The spec lists datas explicitly. The Pi repo tracks the owner's `close.txt`, `farthest.txt` and `web/static/maps/*.html` (personal flight history and a map of home), and those must never ship.
   - Never switch to "bundle every tracked file".

@@ -1,0 +1,7 @@
+# Windows app only — on top of core-src/requirements.txt
+pywebview>=6.2          # WinForms + Edge WebView2 (brings pythonnet)
+tzdata                  # zoneinfo has no system timezone database on Windows
+winrt-runtime           # "Use my PC's location" in the setup wizard
+winrt-Windows.Devices.Geolocation
+winrt-Windows.Foundation
+pyinstaller>=6.10

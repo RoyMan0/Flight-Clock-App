@@ -1,5 +1,5 @@
 """
-The native Mac shell: the LED panel window, the Settings window, the menu bar
+The native Mac shell (shell_win.py is the Windows one; shell_common.py what they share): the LED panel window, the Settings window, the menu bar
 icon, and the menus that drive them.
 
 Two window modes (Settings → Mac App, or the menu):
@@ -12,13 +12,9 @@ pywebview owns the Cocoa main thread; anything touching AppKit from another
 thread goes through AppHelper.callAfter.
 """
 
-import json
 import logging
 import os
-import subprocess
 import threading
-import time
-import urllib.request
 
 import AppKit
 import Foundation
@@ -30,26 +26,9 @@ from webview.platforms.cocoa import BrowserView
 
 import runtime
 import settings
-from version import __version__, RELEASES_REPO
+from shell_common import SEP, ShellBase
 
 log = logging.getLogger("desktop.shell")
-
-
-# Names as the web UI shows them (web/templates/base.html PLUGIN_NAMES)
-PLUGIN_NAMES = {
-    "clock_weather": "Clock & Weather", "flight_tracker": "Flight Tracker",
-    "specific_flight_tracker": "Specific Flight Tracker", "stock_ticker": "Stock Ticker",
-    "snow_report": "Snow Report", "sports": "Sports", "world_daylight": "World Daylight",
-    "ap_news": "Breaking News", "event_countdown": "Event Countdown",
-    "transit": "Transit Arrivals/Departures", "world_clock": "World Clock",
-    "now_playing": "Now Playing", "system_stats": "System Stats", "ai_usage": "AI Usage",
-    "calendar": "Calendar", "maze": "Maze",
-}
-HIDDEN_PLUGINS = {"snow_report"}            # hidden everywhere until it's fixed (see the Pi CLAUDE.md)
-
-
-def _plugin_name(pid):
-    return PLUGIN_NAMES.get(pid) or pid.replace("_", " ").title()
 
 
 # ----------------------------------------------------------------------
@@ -66,7 +45,9 @@ class _Target(AppKit.NSObject):
         return self
 
     def menuAction_(self, sender):
-        self.shell._run_action(str(sender.representedObject()))
+        action = self.shell._actions.get(str(sender.representedObject()))
+        if action:
+            self.shell.run_action(action)
 
     def statusClicked_(self, sender):
         self.shell._status_clicked()
@@ -135,20 +116,12 @@ class PanelApi:
 # Shell
 # ----------------------------------------------------------------------
 
-class Shell:
+class Shell(ShellBase):
     def __init__(self, base_url, pm=None, setup_mode=False, lan_url=None):
-        self.base_url = base_url
-        self.lan_url = lan_url
-        self.pm = pm
-        self.setup_mode = setup_mode
-        self.prefs = settings.load()
-        self.panel = None
-        self.settings_win = None
-        self._quitting = False
+        super().__init__(base_url, pm=pm, setup_mode=setup_mode, lan_url=lan_url)
         self._status_item = None
         self._target = None
         self._actions = {}
-        self._update = None                      # {"version", "url"} once a newer release is found
         self._location_mgr = None
 
     # --- startup ------------------------------------------------------
@@ -226,87 +199,32 @@ class Shell:
 
     # --- menus ----------------------------------------------------------
 
-    def _item(self, menu, title, action=None, checked=False, key=""):
-        item = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            title, "menuAction:" if action else None, key)
-        if action:
-            name = f"a{len(self._actions)}"
-            self._actions[name] = action
-            item.setTarget_(self._target)
-            item.setRepresentedObject_(name)
-        if checked:
-            item.setState_(AppKit.NSControlStateValueOn)
-        menu.addItem_(item)
-        return item
-
-    def _submenu(self, menu, title):
-        sub = AppKit.NSMenu.alloc().initWithTitle_(title)
-        item = self._item(menu, title)
-        item.setSubmenu_(sub)
-        return sub
-
     def _build_menu(self):
+        """The shared menu model (shell_common) as an NSMenu."""
         self._actions = {}
-        m = AppKit.NSMenu.alloc().initWithTitle_("Flight Clock")
-        m.setAutoenablesItems_(False)
-        p = self.prefs
+        return self._ns_menu("Flight Clock", self.menu_model())
 
-        if self.setup_mode:
-            self._item(m, "Show Setup…", self.open_settings)
-        else:
-            visible = bool(self.panel and self.panel.native and self.panel.native.isVisible())
-            self._item(m, "Hide Panel" if visible else "Show Panel", self.toggle_panel)
-            self._item(m, "Settings…", lambda: self.open_settings("/config"), key=",")
-            self._item(m, "Dashboard…", lambda: self.open_settings("/"))
-            m.addItem_(AppKit.NSMenuItem.separatorItem())
-
-            if self.pm:
-                status = self.pm.get_status()
-                held, active = status.get("held"), status.get("active_plugin")
-                sub = self._submenu(m, "Show Module")
-                self._item(sub, "Return to Rotation", self._return_to_rotation, checked=not held)
-                sub.addItem_(AppKit.NSMenuItem.separatorItem())
-                for pid in sorted(self.pm._plugins, key=_plugin_name):
-                    if pid in HIDDEN_PLUGINS:
-                        continue
-                    self._item(sub, _plugin_name(pid), lambda pid=pid: self._show_module(pid),
-                               checked=pid == held)
-                if active:
-                    self._item(m, f"Now showing: {_plugin_name(active)}").setEnabled_(False)
-                m.addItem_(AppKit.NSMenuItem.separatorItem())
-
-            sub = self._submenu(m, "Window Mode")
-            self._item(sub, "Window + Menu Bar Icon", lambda: self.set_prefs(window_mode="window"),
-                       checked=p["window_mode"] == "window")
-            self._item(sub, "Menu Bar Only", lambda: self.set_prefs(window_mode="menubar"),
-                       checked=p["window_mode"] == "menubar")
-            sub = self._submenu(m, "Panel Position")
-            for value, title in (("normal", "Normal Window"), ("floating", "Always on Top"),
-                                 ("desktop", "On the Desktop (behind windows)")):
-                self._item(sub, title, lambda v=value: self.set_prefs(level=v), checked=p["level"] == value)
-            self._style_menu(self._submenu(m, "Style"), p)
-            self._item(m, "Full Screen", self.toggle_fullscreen)
-            m.addItem_(AppKit.NSMenuItem.separatorItem())
-            self._item(m, "Open in Browser", lambda: self._open_url(self.base_url))
-
-        if self._update:
-            self._item(m, f"Update Available: {self._update['version']}…",
-                       lambda: self._open_url(self._update["url"]))
-        else:
-            self._item(m, "Check for Updates…", lambda: threading.Thread(
-                target=self._check_for_updates, args=(True,), daemon=True).start())
-        self._item(m, f"Flight Clock {__version__}").setEnabled_(False)
-        m.addItem_(AppKit.NSMenuItem.separatorItem())
-        self._item(m, "Quit Flight Clock", self.quit, key="q")
-        return m
-
-    def _run_action(self, name):
-        action = self._actions.get(name)
-        if action:
-            try:
-                action()
-            except Exception:
-                log.exception("[shell] menu action failed")
+    def _ns_menu(self, title, items):
+        menu = AppKit.NSMenu.alloc().initWithTitle_(title)
+        menu.setAutoenablesItems_(False)
+        for it in items:
+            if it is SEP:
+                menu.addItem_(AppKit.NSMenuItem.separatorItem())
+                continue
+            item = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                it.title, "menuAction:" if it.action else None, it.key)
+            if it.action:
+                name = f"a{len(self._actions)}"
+                self._actions[name] = it.action
+                item.setTarget_(self._target)
+                item.setRepresentedObject_(name)
+            if it.checked:
+                item.setState_(AppKit.NSControlStateValueOn)
+            item.setEnabled_(it.enabled)
+            if it.submenu is not None:
+                item.setSubmenu_(self._ns_menu(it.title, it.submenu))
+            menu.addItem_(item)
+        return menu
 
     # --- panel window -------------------------------------------------
 
@@ -315,6 +233,9 @@ class Shell:
             return True
         AppHelper.callAfter(self.hide_panel)         # Cmd-W hides; the Dock icon / menu brings it back
         return False
+
+    def panel_visible(self):
+        return bool(self.panel and self.panel.native and self.panel.native.isVisible())
 
     def show_panel(self, under_status_item=False):
         if not self.panel or not self.panel.native:
@@ -370,30 +291,6 @@ class Shell:
             if not (win.styleMask() & AppKit.NSWindowStyleMaskFullScreen):
                 self.hide_panel()
 
-    def _style_menu(self, sub, p):
-        """Style ▸ screen, case, case colour, and the options of each."""
-        for value, title in settings.SCREENS.items():
-            self._item(sub, title, lambda v=value: self.set_prefs(screen=v), checked=p["screen"] == value)
-        sub.addItem_(AppKit.NSMenuItem.separatorItem())
-        for value, case in settings.CASES.items():
-            self._item(sub, case["name"], lambda v=value: self.set_prefs(case=v), checked=p["case"] == value)
-        colors = settings.CASES[p["case"]]["colors"]
-        if colors:
-            current = settings.case_color(p)
-            col = self._submenu(sub, "Colour")
-            for value, title in colors.items():
-                self._item(col, title, lambda v=value: self.set_prefs(case_color=v), checked=current == value)
-        sub.addItem_(AppKit.NSMenuItem.separatorItem())
-        if p["screen"] == "led":
-            for value, title in (("round", "Round LEDs"), ("square", "Square LEDs"), ("sharp", "Sharp Pixels")):
-                self._item(sub, title, lambda v=value: self.set_prefs(led_style=v), checked=p["led_style"] == value)
-            self._item(sub, "Glow", lambda: self.set_prefs(glow=not p["glow"]), checked=p["glow"])
-        if p["screen"] == "flipboard":
-            self._item(sub, "Flip Sound", lambda: self.set_prefs(flip_sound=not p["flip_sound"]),
-                       checked=p["flip_sound"])
-        if p["case"] == "none":
-            self._item(sub, "Bezel", lambda: self.set_prefs(bezel=not p["bezel"]), checked=p["bezel"])
-
     def _apply_case_size(self, resize=True):
         """Keep the window to the case's shape; on a case change, reshape it around its top-left."""
         if not self.panel or not self.panel.native:
@@ -412,12 +309,6 @@ class Shell:
         top = f.origin.y + f.size.height
         win.setFrame_display_animate_(Foundation.NSMakeRect(f.origin.x, top - nh, nw, nh), True, True)
         self._save_panel_frame_soon()
-
-    def look(self) -> dict:
-        """The prefs the panel page draws with (window.applyPrefs)."""
-        p = self.prefs
-        return {**{k: p[k] for k in ("screen", "case", "flip_sound", "led_style", "bezel", "glow")},
-                "case_color": settings.case_color(p)}
 
     def _restore_panel_frame(self):
         frame = self.prefs.get("panel_frame")
@@ -460,11 +351,7 @@ class Shell:
         AppHelper.callAfter(self._apply_window_prefs)
         if self.panel and self.prefs["case"] != old["case"]:
             AppHelper.callAfter(self._apply_case_size)
-        if self.panel:
-            try:
-                self.panel.evaluate_js(f"window.applyPrefs && window.applyPrefs({json.dumps(self.look())})")
-            except Exception:
-                pass
+        self.push_look()
         return self.prefs
 
     def _apply_window_prefs(self):
@@ -547,19 +434,6 @@ class Shell:
 
     # --- control ------------------------------------------------------
 
-    def _show_module(self, pid):
-        if self.pm:
-            self.pm.force_plugin(pid, pin=True)
-            if not (self.panel.native and self.panel.native.isVisible()):
-                self.show_panel()
-
-    def _return_to_rotation(self):
-        if self.pm:
-            self.pm.release_hold()
-
-    def _open_url(self, url):
-        subprocess.Popen(["open", url])
-
     def _prepare_quit(self):
         if self._quitting:
             return
@@ -574,11 +448,6 @@ class Shell:
     def quit(self):
         self._prepare_quit()
         AppHelper.callAfter(AppKit.NSApp.terminate_, None)
-
-    def relaunch(self):
-        """Restart the app (after the setup wizard, or Restart Application in the web UI)."""
-        runtime.spawn_relaunch()
-        self.quit()
 
     # --- location (setup wizard) --------------------------------------
 
@@ -616,30 +485,10 @@ class Shell:
         lat, lon = result["coords"]
         return {"lat": lat, "lon": lon, "label": f"{lat:.3f}, {lon:.3f}"}
 
-    # --- updates ------------------------------------------------------
+    # --- alerts -------------------------------------------------------
 
-    def _check_for_updates(self, interactive=False):
-        """Look for a newer GitHub release; shown as a menu item (and an alert if asked)."""
-        message = None
-        try:
-            req = urllib.request.Request(
-                f"https://api.github.com/repos/{RELEASES_REPO}/releases/latest",
-                headers={"Accept": "application/vnd.github+json", "User-Agent": f"FlightClock/{__version__}"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                rel = json.load(r)
-            latest = str(rel.get("tag_name", "")).lstrip("v")
-            if latest and _version_tuple(latest) > _version_tuple(__version__):
-                dmg = next((a["browser_download_url"] for a in rel.get("assets", [])
-                            if a.get("name", "").endswith(".dmg")), None)
-                self._update = {"version": latest, "url": dmg or rel.get("html_url")}
-                message = f"Flight Clock {latest} is available."
-            else:
-                message = f"You're up to date (Flight Clock {__version__})."
-        except Exception as e:
-            log.info(f"[shell] update check failed: {e}")
-            message = "Couldn't check for updates right now."
-        if interactive:
-            AppHelper.callAfter(self._alert, message, self._update)
+    def alert(self, message, update=None):
+        AppHelper.callAfter(self._alert, message, update)
 
     def _alert(self, message, update):
         alert = AppKit.NSAlert.alloc().init()
@@ -649,12 +498,10 @@ class Shell:
             alert.addButtonWithTitle_("Later")
         AppKit.NSApp.activateIgnoringOtherApps_(True)
         if alert.runModal() == AppKit.NSAlertFirstButtonReturn and update:
-            self._open_url(update["url"])
+            runtime.open_path(update["url"])
 
 
-def _version_tuple(v):
-    out = []
-    for part in v.split("."):
-        digits = "".join(ch for ch in part if ch.isdigit())
-        out.append(int(digits or 0))
-    return tuple(out)
+def notify_already_running():
+    import subprocess
+    subprocess.Popen(["osascript", "-e", 'display notification "Flight Clock is already running — '
+                      'look for the ✈ in the menu bar." with title "Flight Clock"'])

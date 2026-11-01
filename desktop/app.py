@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""
-Flight Clock for Mac — entry point.
+r"""
+Flight Clock for Mac and Windows — entry point.
 
 Runs the same plugins and web UI as the Raspberry Pi display (core-src/, the
 flight-clock-and-more repo) in software mode, and shows the 64×32 panel in a
 native window instead of on an LED matrix.
 
-  Dev:    .venv/bin/python desktop/app.py
+  Dev:    .venv/bin/python desktop/app.py            (Windows: .venv\Scripts\python desktop\app.py)
   Headless (no windows; open the printed URL in a browser):
           FLIGHTCLOCK_HEADLESS=1 .venv/bin/python desktop/app.py
-  Built:  packaging/build.sh  →  dist/Flight Clock.app, dist/FlightClock-<version>.dmg
+  Built:  packaging/build.sh      →  dist/Flight Clock.app, dist/FlightClock-<version>.dmg
+          packaging/build-win.ps1 →  dist/FlightClock-Setup-<version>.exe, dist/FlightClock-<version>-portable.zip
 """
 
 import runtime
@@ -18,7 +19,6 @@ runtime.prepare()      # data dir, env, sys.path, logging — before any shared 
 
 import logging
 import os
-import subprocess
 import sys
 import threading
 
@@ -72,12 +72,12 @@ def _register_routes(app, shell):
         target = {"data": runtime.DATA_DIR, "logs": runtime.LOG_DIR}.get(what)
         if not target:
             return jsonify({"ok": False}), 404
-        subprocess.Popen(["open", target])
+        runtime.open_path(target)
         return jsonify({"ok": True})
 
 
 def _lan_address():
-    """This Mac's LAN IP, for the 'open on your phone' hint."""
+    """This computer's LAN IP, for the 'open on your phone' hint."""
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -112,11 +112,20 @@ class _HeadlessShell:
         return None
 
 
+def _shell_module():
+    if runtime.IS_WIN:
+        import shell_win as mod
+    else:
+        import shell_mac as mod
+    return mod
+
+
 def main():
+    headless = os.environ.get("FLIGHTCLOCK_HEADLESS") == "1"
     if not runtime.acquire_single_instance():
         log.info("[desktop] another copy is already running — exiting")
-        subprocess.Popen(["osascript", "-e", 'display notification "Flight Clock is already running — '
-                          'look for the ✈ in the menu bar." with title "Flight Clock"'])
+        if not headless:
+            _shell_module().notify_already_running()
         return
 
     from version import __version__
@@ -128,7 +137,6 @@ def main():
     from core.config_manager import get_config
     from web.app import create_app
     import settings
-    import shell as shell_mod
 
     cfg = get_config()
     prefs = settings.load()
@@ -161,11 +169,10 @@ def main():
         register_plugins(pm, display, cfg, plugin_classes)
         app = create_app(cfg, display, pm)
 
-    headless = os.environ.get("FLIGHTCLOCK_HEADLESS") == "1"
     if headless:
         sh = _HeadlessShell(f"http://127.0.0.1:{port}")
     else:
-        sh = shell_mod.Shell(f"http://127.0.0.1:{port}", pm=pm, setup_mode=setup_mode, lan_url=lan_url)
+        sh = _shell_module().Shell(f"http://127.0.0.1:{port}", pm=pm, setup_mode=setup_mode, lan_url=lan_url)
     app.restart_cb = sh.relaunch
     app.locate_cb = sh.locate
     _register_routes(app, sh)
@@ -180,9 +187,11 @@ def main():
         threading.Thread(target=pm.run, daemon=True, name="display-loop").start()
 
     if headless:
-        print(f"Flight Clock headless: http://127.0.0.1:{port}/desktop/panel", flush=True)
+        log.info(f"[desktop] headless: http://127.0.0.1:{port}/desktop/panel")
+        if sys.stdout:                       # None in the built Windows app (no console)
+            print(f"Flight Clock headless: http://127.0.0.1:{port}/desktop/panel", flush=True)
         threading.Event().wait()
-    sh.run()          # Cocoa main loop; returns when the app quits
+    sh.run()          # GUI main loop (Cocoa / WinForms); returns when the app quits
     log.info("[desktop] bye")
 
 

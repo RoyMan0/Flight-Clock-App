@@ -1,13 +1,11 @@
 # PyInstaller spec for Flight Clock.app (Apple Silicon). Run via packaging/build.sh.
 #
 # Bundles the shared code from core-src/ (the flight-clock-and-more repo) plus
-# the desktop shell. Assets are an explicit allowlist: the repo also tracks the
-# owner's close.txt / farthest.txt / flight maps, which must never ship.
+# the desktop shell. What ships is listed in packaging/bundle.py (an allowlist:
+# the repo also tracks the owner's close.txt / farthest.txt / flight maps).
 
 import os
 import sys
-
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 CORE = os.path.realpath(os.path.join(ROOT, "core-src"))
@@ -17,62 +15,19 @@ ART = os.path.join(ROOT, "packaging", "art")
 sys.path.insert(0, DESKTOP)
 from version import __version__  # noqa: E402
 
-# ---- shared-code assets (source, destination inside the bundle) -------------
-datas = [
-    (os.path.join(CORE, "fonts"), "fonts"),
-    (os.path.join(CORE, "logos"), "logos"),
-    (os.path.join(CORE, "icons"), "icons"),
-    (os.path.join(CORE, "assets", "world_daylight"), os.path.join("assets", "world_daylight")),
-    (os.path.join(CORE, "airports.json"), "."),
-    (os.path.join(CORE, "airbus.mp3"), "."),
-    (os.path.join(CORE, "espn.mp3"), "."),
-    (os.path.join(CORE, "config", "config.example.json"), "config"),
-    (os.path.join(CORE, "config", "secrets.example.json"), "config"),
-    (os.path.join(CORE, "plugins", "transit", "cta_rail_order.json"), os.path.join("plugins", "transit")),
-    (os.path.join(CORE, "web", "templates"), os.path.join("web", "templates")),
-    (os.path.join(DESKTOP, "panel"), os.path.join("desktop", "panel")),
-]
-for name in os.listdir(os.path.join(CORE, "web", "static")):          # favicons only — not maps/
-    path = os.path.join(CORE, "web", "static", name)
-    if os.path.isfile(path):
-        datas.append((path, os.path.join("web", "static")))
+sys.path.insert(0, SPECPATH)
+import bundle  # noqa: E402  (packaging/bundle.py: the asset allowlist and module list, shared with Windows)
 
-# Library data files PyInstaller's own hooks don't pick up
-for pkg in ("folium", "branca", "xyzservices", "recurring_ical_events", "x_wr_timezone", "tzdata"):
-    try:
-        datas += collect_data_files(pkg)
-    except Exception:
-        pass
-
-# ---- modules ------------------------------------------------------------------
-# Plugins are imported by name (core/bootstrap.py), so list every shared module.
-SKIP_DIRS = {"scripts", "rgbmatrix", "__pycache__", ".git", ".cache", "data", "config", "logos", "icons", "fonts"}
-SKIP_FILES = {"main.py", "its-a-plane.py"}
-hiddenimports = []
-for dirpath, dirnames, filenames in os.walk(CORE):
-    dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
-    for fn in filenames:
-        if fn.endswith(".py") and fn not in SKIP_FILES:
-            rel = os.path.relpath(os.path.join(dirpath, fn), CORE)[:-3]
-            mod = rel.replace(os.sep, ".")
-            if mod.endswith(".__init__"):
-                mod = mod[: -len(".__init__")]
-            hiddenimports.append(mod)
-SHARED_PACKAGES = sorted({m.split(".")[0] for m in hiddenimports if "." in m})
-hiddenimports += ["rgbmatrix", "rgbmatrix.graphics"]
-for pkg in ("fr24", "google.transit", "icalendar", "recurring_ical_events", "h2", "hpack", "httpx", "qrcode"):
-    try:
-        hiddenimports += collect_submodules(pkg)
-    except Exception:
-        pass
-hiddenimports += ["CoreLocation", "ServiceManagement", "Quartz", "WebKit"]
+datas = bundle.datas(CORE, DESKTOP)
+hiddenimports, SHARED_PACKAGES = bundle.hiddenimports(CORE)
+hiddenimports += ["CoreLocation", "ServiceManagement", "Quartz", "WebKit", "shell_mac"]
 
 a = Analysis(
     [os.path.join(DESKTOP, "app.py")],
     pathex=[CORE, DESKTOP, os.path.join(DESKTOP, "vendor")],
     datas=datas,
     hiddenimports=hiddenimports,
-    excludes=["tkinter", "matplotlib", "numpy.tests", "PyQt5", "PyQt6", "PySide6", "gi"],
+    excludes=bundle.EXCLUDES,
     noarchive=False,
     # Also ship the shared packages as .py files: the code builds asset paths like
     # utilities/../fonts, which only resolve if the package folders exist on disk

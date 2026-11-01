@@ -1,5 +1,6 @@
 """
-Draws the app icon (icon.icns) and the DMG window background — run by build.sh.
+Draws the app icon (icon.icns on the Mac, icon.ico for Windows) and the DMG
+window background — run by build.sh / build-win.ps1.
 
   python packaging/make_art.py <out dir>
 """
@@ -125,9 +126,17 @@ def make_dmg_background(out_path, w=660, h=400):
     img.save(out_path, dpi=(144, 144))
 
 
+def make_ico(out_path):
+    """Windows icon: the same art, cropped to the body (Windows icons don't use Apple's margin)."""
+    img = icon_png(512).crop((44, 44, 468, 468))
+    img.save(out_path, sizes=[(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)])
+
+
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
     os.makedirs(out, exist_ok=True)
-    make_icns(os.path.join(out, "icon.icns"))
-    make_dmg_background(os.path.join(out, "dmg-background.png"))
+    make_ico(os.path.join(out, "icon.ico"))
+    if sys.platform == "darwin":
+        make_icns(os.path.join(out, "icon.icns"))
+        make_dmg_background(os.path.join(out, "dmg-background.png"))
     print("art written to", out)
