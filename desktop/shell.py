@@ -518,20 +518,28 @@ class Shell:
     # --- settings window ---------------------------------------------
 
     def open_settings(self, path="/config"):
-        AppHelper.callAfter(self._open_settings_native, path)
-
-    def _open_settings_native(self, path):
         url = f"{self.base_url}{path}" if not self.setup_mode else f"{self.base_url}/setup"
         win = self.settings_win
         if win is not None and win.native is not None:
-            if path:
-                win.load_url(url)
-            win.native.makeKeyAndOrderFront_(None)
-            AppKit.NSApp.activateIgnoringOtherApps_(True)
+            AppHelper.callAfter(self._focus_settings, url if path else None)
             return
+        # pywebview only creates a window after start() when create_window is called
+        # off the main thread (on the main thread it silently does nothing)
+        threading.Thread(target=self._create_settings, args=(url,), daemon=True, name="settings-window").start()
+
+    def _create_settings(self, url):
         self.settings_win = webview.create_window("Flight Clock Settings", url, width=1180, height=860,
                                                   min_size=(420, 500))
         self.settings_win.events.closed += self._on_settings_closed
+        AppHelper.callAfter(AppKit.NSApp.activateIgnoringOtherApps_, True)
+
+    def _focus_settings(self, url):
+        win = self.settings_win
+        if win is None or win.native is None:
+            return
+        if url:
+            win.load_url(url)
+        win.native.makeKeyAndOrderFront_(None)
         AppKit.NSApp.activateIgnoringOtherApps_(True)
 
     def _on_settings_closed(self):
