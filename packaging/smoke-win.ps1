@@ -32,7 +32,14 @@ function Get-Ok($url) {
 $failed = $false
 # 1. First launch (no home location): only the setup wizard
 $run = Start-App (Join-Path $env:TEMP "fc-smoke-setup")
-try { Get-Ok "$($run.Url)/setup" | Out-Null } finally { Stop-Process -Id $run.Process.Id -Force }
+try {
+    Get-Ok "$($run.Url)/setup" | Out-Null
+    # The wizard's "Find your address" (utilities/geocode.py, online lookup)
+    $geo = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Method Post -ContentType "application/json" `
+            -Body '{"q":"Chicago, Illinois"}' "$($run.Url)/setup/geocode").Content | ConvertFrom-Json
+    Write-Host "  geocode: ok=$($geo.ok) first=$($geo.results[0].name) $($geo.results[0].lat),$($geo.results[0].lon) $($geo.error)"
+    if (-not $geo.ok -or -not $geo.results) { Write-Host "  !! address lookup failed"; $failed = $true }
+} finally { Stop-Process -Id $run.Process.Id -Force }
 
 # 2. Configured: every plugin, every page
 $data = Join-Path $env:TEMP "fc-smoke"
