@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Enjoying Flight Clock?</title>
+<!-- The one-time tip window (ShellBase.maybe_ask_for_tip) and the menu's "Support Flight Clock".
+     Links open in the browser through /api/desktop/open/<venmo|paypal>; the QR codes are the
+     ones on the About page (core-src web/static). -->
+<style>
+  :root { color-scheme: light dark; --bg: #f6f5f2; --fg: #222; --muted: #6b6b70; --card: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1c1c1e; --fg: #f2f2f2; --muted: #a0a0a6; --card: #2a2a2d; } }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--fg); font: 14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+         display: flex; flex-direction: column; align-items: center; text-align: center; padding: 26px 24px; box-sizing: border-box; }
+  .plane { font-size: 34px; }
+  h1 { font-size: 20px; margin: 4px 0 8px; }
+  p { margin: 0 0 14px; color: var(--muted); max-width: 360px; }
+  p strong { color: var(--fg); }
+  .opts { display: flex; gap: 18px; justify-content: center; margin: 6px 0 18px; }
+  .opt { background: var(--card); border-radius: 14px; padding: 12px 12px 10px; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+         display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; border: 0; font: inherit; color: inherit; }
+  .opt img { width: 128px; height: 128px; background: #fff; border-radius: 8px; padding: 4px; }
+  .pill { color: #fff; font-weight: 600; font-size: 13px; padding: 5px 12px; border-radius: 8px; }
+  .scan { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 18px; }
+  .later { display: flex; gap: 10px; }
+  .later button { font: inherit; padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(128,128,128,.4);
+                  background: transparent; color: var(--fg); cursor: pointer; }
+  .thanks { display: none; }
+  body.done .ask { display: none; }
+  body.done .thanks { display: block; }
+</style>
+</head>
+<body>
+  <div class="plane">✈️</div>
+  <div class="ask">
+    <h1>Enjoying Flight Clock?</h1>
+    <p>I'm one person building this in my spare time, and I've put <strong>hundreds of hours</strong> into it.
+       It's free, and it'll stay that way. If it brings you some joy, a tip of any size means a lot and helps me keep making it better.</p>
+    <div class="opts">
+      <button class="opt" data-go="venmo"><img src="/static/qr-venmo.svg" alt="Venmo QR code">
+        <span class="pill" style="background:#008CFF">Venmo @roy-hobbs</span></button>
+      <button class="opt" data-go="paypal"><img src="/static/qr-paypal.svg" alt="PayPal QR code">
+        <span class="pill" style="background:#003087">PayPal</span></button>
+    </div>
+    <div class="scan">Scan with your phone, or click to open in your browser.</div>
+    <div class="later">
+      <button id="already">I already did, thanks!</button>
+      <button id="close">Maybe later</button>
+    </div>
+    <p style="font-size:12px;margin-top:16px">This only shows once. It's always under <strong>✈ → Support Flight Clock</strong>.</p>
+  </div>
+  <div class="thanks">
+    <h1>Thank you! 💛</h1>
+    <p>That really helps. Enjoy the clock!</p>
+    <div class="later"><button id="close2">Close</button></div>
+  </div>
+<script>
+  const close = () => fetch('/api/desktop/thanks/close', { method: 'POST' }).catch(() => window.close());
+  for (const b of document.querySelectorAll('[data-go]')) {
+    b.addEventListener('click', () => {
+      fetch('/api/desktop/open/' + b.dataset.go, { method: 'POST' });
+      document.body.classList.add('done');
+    });
+  }
+  document.getElementById('already').onclick = () => document.body.classList.add('done');
+  document.getElementById('close').onclick = close;
+  document.getElementById('close2').onclick = close;
+</script>
+</body>
+</html>

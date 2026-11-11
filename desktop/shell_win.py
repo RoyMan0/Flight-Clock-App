@@ -175,6 +175,8 @@ class Shell(ShellBase):
             self._apply_case_limits()
             self._apply_window_prefs()
         threading.Thread(target=self._check_for_updates, daemon=True, name="update-check").start()
+        self.note_launch()
+        self.maybe_ask_for_tip()
 
     # --- tray ---------------------------------------------------------
 

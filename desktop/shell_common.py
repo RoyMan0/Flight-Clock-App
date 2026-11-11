@@ -7,6 +7,7 @@ the update check. shell_mac.py and shell_win.py subclass ShellBase.
 import json
 import logging
 import threading
+import time
 import urllib.request
 
 import runtime
@@ -27,6 +28,11 @@ PLUGIN_NAMES = {
     "calendar": "Calendar", "maze": "Maze",
 }
 HIDDEN_PLUGINS = set()                      # modules left out of the Show Module menu
+
+# The one-time tip window: on a later start (not the first one after setup), once the
+# app has been in use this long, so people have had a chance to enjoy it first
+TIP_AFTER_SECS = 24 * 3600
+TIP_DELAY_SECS = 8                          # after startup, so it doesn't fight the panel window
 
 
 def plugin_name(pid):
@@ -61,6 +67,7 @@ class ShellBase:
         self.settings_win = None
         self._quitting = False
         self._update = None                      # {"version", "url"} once a newer release is found
+        self._tip_win = None
 
     # --- per-platform hooks ------------------------------------------
 
@@ -123,6 +130,7 @@ class ShellBase:
             m.append(Item("Full Screen", self.toggle_fullscreen))
             m.append(SEP)
             m.append(Item("Open in Browser", lambda: runtime.open_path(self.base_url)))
+            m.append(Item("Support Flight Clock ♥", self.open_tip_window))
 
         if self._update:
             m.append(Item(f"Update Available: {self._update['version']}…",
@@ -188,6 +196,65 @@ class ShellBase:
             except Exception:
                 pass
         threading.Thread(target=push, daemon=True, name="push-look").start()
+
+    # --- the one-time tip window ------------------------------------------
+
+    def note_launch(self):
+        """Count normal starts (the setup wizard's own run doesn't count)."""
+        if self.setup_mode:
+            return
+        p = self.prefs
+        changes = {"launches": int(p.get("launches") or 0) + 1}
+        if not p.get("first_launch_at"):
+            changes["first_launch_at"] = int(time.time())
+        self.prefs = settings.update(changes)
+
+    def tip_due(self) -> bool:
+        p = self.prefs
+        first = p.get("first_launch_at") or time.time()
+        return (not self.setup_mode and not p.get("tip_asked") and int(p.get("launches") or 0) >= 2
+                and time.time() - first >= TIP_AFTER_SECS)
+
+    def maybe_ask_for_tip(self):
+        """Call once at startup, after note_launch(): opens the tip window if it's time. Once only."""
+        if not self.tip_due():
+            return
+        self.prefs = settings.update({"tip_asked": True})
+        timer = threading.Timer(TIP_DELAY_SECS, self.open_tip_window)
+        timer.daemon = True
+        timer.start()
+
+    def open_tip_window(self):
+        """The "Enjoying Flight Clock?" window (desktop/panel/thanks.html); also the menu's
+        Support Flight Clock item. pywebview windows are created off the GUI thread."""
+        if self._tip_win is not None:
+            try:
+                self._tip_win.show()
+                self._tip_win.restore()
+                return
+            except Exception:
+                self._tip_win = None
+
+        def make():
+            import webview
+            log.info("[shell] opening the tip window")
+            win = webview.create_window("Enjoying Flight Clock?", f"{self.base_url}/desktop/thanks",
+                                        width=440, height=640, resizable=False)
+            self._tip_win = win
+            win.events.closed += lambda *a: setattr(self, "_tip_win", None)
+            self._bring_to_front()
+        threading.Thread(target=make, daemon=True, name="tip-window").start()
+
+    def close_tip_window(self):
+        win, self._tip_win = self._tip_win, None
+        if win is not None:
+            try:
+                win.destroy()                    # pywebview: safe from any thread
+            except Exception:
+                pass
+
+    def _bring_to_front(self):
+        """A new window appears in front (the Mac shell activates the app)."""
 
     # --- control --------------------------------------------------------
 

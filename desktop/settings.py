@@ -26,6 +26,10 @@ DEFAULTS = {
     "launch_at_login": False,
     "lan_access": False,          # serve the web UI on the network (phone config), not just this Mac
     "panel_frame": None,          # [x, y, w, h] of the panel window, restored on launch
+    # The one-time "Enjoying Flight Clock?" tip window (ShellBase.maybe_ask_for_tip)
+    "launches": 0,                # normal starts (not the setup wizard)
+    "first_launch_at": 0,         # epoch seconds of the first normal start
+    "tip_asked": False,           # shown once; never again
 }
 
 SCREENS = {

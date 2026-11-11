@@ -246,6 +246,11 @@ class Shell(ShellBase):
         # Runs on a pywebview worker thread once the GUI loop is up
         AppHelper.callAfter(self._setup_native)
         threading.Thread(target=self._check_for_updates, daemon=True, name="update-check").start()
+        self.note_launch()
+        self.maybe_ask_for_tip()
+
+    def _bring_to_front(self):
+        AppHelper.callAfter(AppKit.NSApp.activateIgnoringOtherApps_, True)
 
     def _setup_native(self):
         _patch_app_delegate(self)

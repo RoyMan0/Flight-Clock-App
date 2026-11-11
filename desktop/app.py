@@ -40,6 +40,16 @@ def _register_routes(app, shell):
         """Every module on every screen, and every case, from sample data (for choosing a style)."""
         return send_from_directory(runtime.PANEL_DIR, "gallery.html", max_age=0)
 
+    @app.get("/desktop/thanks")
+    def desktop_thanks():
+        return send_from_directory(runtime.PANEL_DIR, "thanks.html", max_age=0)
+
+    @app.post("/api/desktop/thanks/close")
+    def desktop_thanks_close():
+        if shell is not None and hasattr(shell, "close_tip_window"):
+            shell.close_tip_window()
+        return jsonify({"ok": True})
+
     @app.get("/desktop/panel/<path:name>")
     def desktop_panel_file(name):
         if name.split("/")[0] not in ("js", "css"):
@@ -69,7 +79,9 @@ def _register_routes(app, shell):
 
     @app.post("/api/desktop/open/<what>")
     def desktop_open(what):
-        target = {"data": runtime.DATA_DIR, "logs": runtime.LOG_DIR}.get(what)
+        from utilities import support      # the tip links open in the browser, not in an app window
+        target = {"data": runtime.DATA_DIR, "logs": runtime.LOG_DIR,
+                  "venmo": support.VENMO_URL, "paypal": support.PAYPAL_URL}.get(what)
         if not target:
             return jsonify({"ok": False}), 404
         runtime.open_path(target)
