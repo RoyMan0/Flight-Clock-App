@@ -109,7 +109,7 @@ class _HeadlessShell:
         log.info("[desktop] headless: restart requested (ignored)")
 
     def locate(self):
-        return None
+        raise RuntimeError("no location in headless mode")
 
 
 def _shell_module():

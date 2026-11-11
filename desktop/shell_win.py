@@ -455,7 +455,7 @@ class Shell(ShellBase):
 
     # --- location (setup wizard) --------------------------------------
 
-    def locate(self, timeout=20):
+    def locate(self, timeout=30):
         """{'lat', 'lon', 'label'} from Windows location services. Blocks the calling (web) thread."""
         import asyncio
         try:

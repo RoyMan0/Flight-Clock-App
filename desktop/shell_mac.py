@@ -464,8 +464,9 @@ class Shell(ShellBase):
 
     # --- location (setup wizard) --------------------------------------
 
-    def locate(self, timeout=20):
-        """{'lat', 'lon', 'label'} from Location Services. Blocks the calling (web) thread."""
+    def locate(self, timeout=60):
+        """{'lat', 'lon', 'label'} from Location Services. Blocks the calling (web) thread.
+        The timeout is long because the first call waits for the user to answer the permission prompt."""
         result = {}
         finished = threading.Event()
 
@@ -491,7 +492,8 @@ class Shell(ShellBase):
 
         AppHelper.callAfter(start)
         if not finished.wait(timeout):
-            raise RuntimeError("timed out waiting for Location Services")
+            raise RuntimeError("no answer from Location Services. Check that Wi-Fi is on and that Flight Clock "
+                               "is allowed in System Settings → Privacy & Security → Location Services")
         self._location_mgr = None
         if result.get("error"):
             raise RuntimeError(result["error"])
