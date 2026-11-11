@@ -17,6 +17,16 @@
       <canvas id="glow"></canvas>
       <div id="offline">STARTING…</div>
     </div>
+    <!-- Now Playing: ⏮ ⏭ over the screen, shown on hover while that module is up (core.js) -->
+    <div id="np-controls">
+      <button class="np-btn" data-dir="previous" title="Previous song">
+        <svg viewBox="0 0 24 24"><path d="M6 5h2.4v14H6zM20 5v14L9.5 12z"/></svg>
+      </button>
+      <button class="np-btn" data-dir="next" title="Next song">
+        <svg viewBox="0 0 24 24"><path d="M15.6 5H18v14h-2.4zM4 5l10.5 7L4 19z"/></svg>
+      </button>
+      <div id="np-msg"></div>
+    </div>
   </div>
 </div>
 <script src="/desktop/panel/js/board.js"></script>

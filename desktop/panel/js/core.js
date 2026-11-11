@@ -99,10 +99,45 @@
     setTimeout(pollFrame, Math.max(0, 100 - (performance.now() - t0)));
   }
 
-  let lastRev = null;
+  // ---- Now Playing ⏮ ⏭ ------------------------------------------------------------
+  // Shown (on hover, see panel.css) only while Now Playing is up with a source that can skip
+  const npMsg = document.getElementById('np-msg');
+  let npMsgTimer = null;
+  function npControls() {
+    const on = !preview && !!state && state.plugin === 'now_playing' && !!(state.model && state.model.can_skip);
+    body.classList.toggle('np-skip', on);
+  }
+  function npSay(text) {
+    npMsg.textContent = text;
+    npMsg.classList.add('on');
+    clearTimeout(npMsgTimer);
+    npMsgTimer = setTimeout(() => npMsg.classList.remove('on'), 4000);
+  }
+  for (const btn of document.querySelectorAll('.np-btn')) {
+    // Keep clicks off the window drag (Windows easy_drag listens for mousedown) and double-click full screen
+    btn.addEventListener('mousedown', (e) => e.stopPropagation());
+    btn.addEventListener('dblclick', (e) => e.stopPropagation());
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (btn.classList.contains('busy')) return;
+      btn.classList.add('busy');
+      try {
+        const r = await fetch('/api/now_playing/skip', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                         body: JSON.stringify({ direction: btn.dataset.dir }) }).then((r) => r.json());
+        if (!r.ok) npSay(r.error || "Couldn't change the song");
+      } catch (err) {
+        npSay("Couldn't change the song");
+      }
+      setTimeout(() => btn.classList.remove('busy'), 400);
+    });
+  }
+
+  let lastRev = null, modelTicks = 0;
   async function pollModel() {
     const t0 = performance.now();
-    if (prefs.screen !== 'led') {
+    // The LED screen only needs the model for the ⏮ ⏭ buttons, so it asks once a second
+    modelTicks++;
+    if (prefs.screen !== 'led' || modelTicks % 4 === 0) {
       try {
         const r = await fetch('/api/display/model', { cache: 'no-store' });
         if (!r.ok) throw new Error(r.status);
@@ -111,6 +146,7 @@
           lastRev = m.rev;
           state = { plugin: m.plugin, model: m.model };
           relayout();
+          npControls();
         }
         if (m.brightness !== brightness) gotFrame(frame, m.brightness);
         offline.style.display = 'none';

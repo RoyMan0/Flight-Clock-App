@@ -175,6 +175,7 @@ def main():
         sh = _shell_module().Shell(f"http://127.0.0.1:{port}", pm=pm, setup_mode=setup_mode, lan_url=lan_url)
     app.restart_cb = sh.relaunch
     app.locate_cb = sh.locate
+    app.media_cb = getattr(sh, "media_control", None)    # Now Playing ⏮ ⏭: a player on this computer
     _register_routes(app, sh)
 
     threading.Thread(
