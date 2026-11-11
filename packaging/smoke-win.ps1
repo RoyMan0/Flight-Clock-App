@@ -76,6 +76,10 @@ try {
     $ss = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Method Post -ContentType "application/json" -Body $body "$url/api/system_stats/test").Content | ConvertFrom-Json
     Write-Host "  system stats: ok=$($ss.ok) os=$($ss.os) values=$($ss.values | ConvertTo-Json -Compress) missing=$($ss.missing | ConvertTo-Json -Compress) $($ss.message)"
     if (-not $ss.ok -or -not $ss.values.cpu -or -not $ss.values.mem) { Write-Host "  !! system stats for this PC failed"; $failed = $true }
+    # Snow Report's resort search reads plugins/snow_report/resorts.json, which must ship in the bundle
+    $resorts = @((Get-Ok "$url/api/snow_report/resorts?q=keystone").Content | ConvertFrom-Json)
+    Write-Host "  resort search: $($resorts.Count) match(es), first=$($resorts[0].name)"
+    if (-not $resorts.Count) { Write-Host "  !! resort search found nothing (resorts.json missing?)"; $failed = $true }
 } finally {
     Stop-Process -Id $p.Id -Force
 }

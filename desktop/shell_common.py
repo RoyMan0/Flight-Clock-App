@@ -175,11 +175,19 @@ class ShellBase:
                 "case_color": settings.case_color(p)}
 
     def push_look(self):
-        if self.panel:
+        """Tell the panel page about new prefs. evaluate_js waits for the page's answer, which
+        needs the GUI thread, and menu clicks run *on* the GUI thread: calling it inline from a
+        menu action deadlocks the app. So it always runs on a worker thread."""
+        if not self.panel:
+            return
+        script = f"window.applyPrefs && window.applyPrefs({json.dumps(self.look())})"
+
+        def push():
             try:
-                self.panel.evaluate_js(f"window.applyPrefs && window.applyPrefs({json.dumps(self.look())})")
+                self.panel.evaluate_js(script)
             except Exception:
                 pass
+        threading.Thread(target=push, daemon=True, name="push-look").start()
 
     # --- control --------------------------------------------------------
 

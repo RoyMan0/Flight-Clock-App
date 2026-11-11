@@ -6,8 +6,8 @@ holds the menu and everything else they share.)
 Two window modes (Settings → Windows App, or the menu):
   window   the panel is an ordinary window (frameless, resizable) with a taskbar
            button; clicking the tray icon shows or hides it.
-  menubar  "tray only": no taskbar button. Clicking the tray icon pops the panel
-           up beside it (it hides again when you click elsewhere).
+  menubar  "tray only": no taskbar button. Clicking the tray icon shows or hides the
+           panel (beside the tray the first time; after that where you left it).
 
 pywebview runs WinForms + Edge WebView2 on the main thread. Its window methods
 (show, hide, resize, move, on_top) are safe from any thread; anything that
@@ -45,6 +45,9 @@ user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
 user32.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
 user32.MonitorFromPoint.restype = wintypes.HANDLE
 user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
+user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+user32.GetAsyncKeyState.restype = ctypes.c_short
+VK_LBUTTON = 0x01
 
 HWND_BOTTOM = 1
 SWP_NOSIZE, SWP_NOMOVE, SWP_NOZORDER, SWP_NOACTIVATE = 0x1, 0x2, 0x4, 0x10
@@ -99,6 +102,9 @@ class PanelApi:
     def toggle_fullscreen(self):
         self._shell.toggle_fullscreen()
 
+    def resize_start(self, sx, sy):
+        self._shell.resize_drag(int(sx), int(sy))
+
 
 # ----------------------------------------------------------------------
 # Shell
@@ -113,9 +119,9 @@ class Shell(ShellBase):
         self.tray = None
         self._hwnd = None
         self._fullscreen = False
-        self._auto_hidden_at = 0.0           # tray-only: when clicking away last hid the panel
         self._ratio_timer = None
         self._save_timer = None
+        self._resizing = False
 
     # --- startup ------------------------------------------------------
 
@@ -130,7 +136,7 @@ class Shell(ShellBase):
             w, h = case["size"]
             x = y = None
             frame = self.prefs.get("panel_frame")
-            if frame and len(frame) == 4 and self.prefs["window_mode"] == "window" and _on_a_screen(frame):
+            if frame and len(frame) == 4 and _on_a_screen(frame):
                 x, y, w, h = (int(v) for v in frame)
             self.panel = webview.create_window(
                 "Flight Clock", f"{self.base_url}/desktop/panel", js_api=PanelApi(self),
@@ -176,8 +182,6 @@ class Shell(ShellBase):
         if self.setup_mode or not self.panel:
             self.open_settings()
             return
-        if time.monotonic() - self._auto_hidden_at < 0.4:
-            return          # this click is what just hid it (the panel lost focus to the tray)
         self.toggle_panel()
 
     # --- panel window -------------------------------------------------
@@ -194,12 +198,12 @@ class Shell(ShellBase):
     def show_panel(self):
         if not self.panel:
             return
-        if self.prefs["window_mode"] == "menubar":
-            self._position_by_tray()
+        if self.prefs["window_mode"] == "menubar" and not self.prefs.get("panel_frame"):
+            self._position_by_tray()             # the first time; then wherever it was left
         self.panel.show()
         if self._hwnd:
             user32.SetForegroundWindow(self._hwnd)
-            if self.prefs["level"] == "desktop" and self.prefs["window_mode"] == "window":
+            if self.prefs["level"] == "desktop":
                 self._send_to_bottom()
 
     def hide_panel(self):
@@ -226,14 +230,13 @@ class Shell(ShellBase):
 
     def _on_activated(self):
         # "On the desktop": clicking the panel mustn't lift it over other windows
-        if self.prefs["level"] == "desktop" and self.prefs["window_mode"] == "window" and not self._fullscreen:
+        if self.prefs["level"] == "desktop" and not self._fullscreen:
             self._send_to_bottom()
 
     def _on_deactivated(self):
-        # Tray-only behaves like a pop-up: clicking elsewhere hides it
-        if self.prefs["window_mode"] == "menubar" and not self._quitting and not self._fullscreen:
-            self._auto_hidden_at = time.monotonic()
-            threading.Thread(target=self.hide_panel, daemon=True).start()
+        # The panel stays up when another window is clicked, in both modes
+        # (tray-only only drops the taskbar button)
+        pass
 
     def _send_to_bottom(self):
         user32.SetWindowPos(self._hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
@@ -297,6 +300,47 @@ class Shell(ShellBase):
         self.panel.resize(nw, round(nw * h / w))
         self._save_panel_frame_soon()
 
+    def resize_drag(self, sx, sy):
+        """A resize from one of the panel page's grips (.grip, bigger than the thin border a
+        frameless window has): follows the mouse while the left button is held, keeping the
+        case's ratio and the opposite edge in place. sx/sy: -1 left/top, 1 right/bottom, 0 neither."""
+        if not self._hwnd or self._fullscreen or self._resizing:
+            return
+        self._resizing = True
+        threading.Thread(target=self._resize_loop, args=(sx, sy), daemon=True, name="resize").start()
+
+    def _resize_loop(self, sx, sy):
+        try:
+            start, pt, r = wintypes.POINT(), wintypes.POINT(), wintypes.RECT()
+            user32.GetCursorPos(ctypes.byref(start))
+            user32.GetWindowRect(self._hwnd, ctypes.byref(r))
+            x0, y0, w0, h0 = r.left, r.top, r.right - r.left, r.bottom - r.top
+            case = settings.CASES[self.prefs["case"]]
+            ratio = case["size"][0] / case["size"][1]
+            min_w = case["min"][0] * (getattr(self.panel.native, "_scale", 1.0) or 1.0)
+            last = None
+            while user32.GetAsyncKeyState(VK_LBUTTON) & 0x8000:
+                user32.GetCursorPos(ctypes.byref(pt))
+                by_x = w0 + sx * (pt.x - start.x)
+                by_y = (h0 + sy * (pt.y - start.y)) * ratio
+                if sx and sy:                       # corner: whichever way the mouse moved more
+                    nw = by_x if abs(by_x - w0) >= abs(by_y - w0) else by_y
+                else:
+                    nw = by_x if sx else by_y
+                nw = int(max(min_w, nw))
+                nh = round(nw / ratio)
+                x = x0 + w0 - nw if sx < 0 else x0
+                y = y0 + h0 - nh if sy < 0 else y0
+                if (x, y, nw, nh) != last:
+                    user32.SetWindowPos(self._hwnd, None, x, y, nw, nh, SWP_NOZORDER | SWP_NOACTIVATE)
+                    last = (x, y, nw, nh)
+                time.sleep(1 / 60)
+        except Exception:
+            log.exception("[shell] resize failed")
+        finally:
+            self._resizing = False
+            self._save_panel_frame_soon()
+
     def _on_resized(self, *args):
         # Windows has no aspect-ratio lock: once a resize settles, fix the height to the case's ratio
         if self._ratio_timer:
@@ -325,8 +369,8 @@ class Shell(ShellBase):
         self._save_timer.start()
 
     def _save_panel_frame(self):
-        if not self.panel or self.prefs["window_mode"] == "menubar" or self._fullscreen:
-            return                                   # tray-only places it by the tray each time
+        if not self.panel or self._fullscreen:
+            return
         try:
             frame = [self.panel.x, self.panel.y, self.panel.width, self.panel.height]
         except Exception:
@@ -341,10 +385,6 @@ class Shell(ShellBase):
         self.prefs = settings.update(changes)
         if "launch_at_login" in changes and changes["launch_at_login"] != old["launch_at_login"]:
             self._set_launch_at_login(self.prefs["launch_at_login"])
-        if self.panel and old["window_mode"] == "menubar" and self.prefs["window_mode"] == "window":
-            frame = self.prefs.get("panel_frame")
-            if frame and len(frame) == 4 and _on_a_screen(frame):
-                self.panel.move(int(frame[0]), int(frame[1]))     # back from beside the tray
         self._apply_window_prefs()
         if self.panel and self.prefs["case"] != old["case"]:
             self._apply_case_size()
@@ -367,12 +407,11 @@ class Shell(ShellBase):
             if visible and not tray_only:
                 self.panel.show()
         level = self.prefs["level"]
-        self.panel.on_top = tray_only or level == "floating"
-        if not tray_only:
-            if not self.panel_visible():
-                self.panel.show()
-            if level == "desktop":
-                self._send_to_bottom()
+        self.panel.on_top = level == "floating"
+        if not tray_only and not self.panel_visible():
+            self.panel.show()
+        if level == "desktop":
+            self._send_to_bottom()
 
     def _set_launch_at_login(self, enabled):
         """A per-user Run entry in the registry (installed app only)."""

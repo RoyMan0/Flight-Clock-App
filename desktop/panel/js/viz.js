@@ -138,11 +138,11 @@ window.FC = window.FC || {};
       name: 'Vortex',
       frame(v, a) {
         const { ctx, W, H } = v;
-        feedback(v, { zoom: 0.958 - a.bass * 0.012, rot: 0.016 + a.bass * 0.03, alpha: 0.965, fade: 'rgba(5,7,9,1)' });
+        feedback(v, { zoom: 0.975 - a.bassS * 0.008, rot: 0.005 + a.bassS * 0.008, alpha: 0.965, fade: 'rgba(5,7,9,1)' });
         const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) * 0.5, w = a.wave, n = w.length;
         ctx.save();
         ctx.lineCap = 'round';
-        const strands = 7 + Math.round(a.level * 10);
+        const strands = 4 + Math.round(a.levelS * 7);
         for (let s = 0; s < strands; s++) {          // short arcs of green fire / dark red around the rim
           const start = v.rand() * TAU, span = 0.4 + v.rand() * 1.4, rad = R * (0.72 + v.rand() * 0.3);
           const red = v.rand() < 0.3, seg = 24;
@@ -161,7 +161,7 @@ window.FC = window.FC || {};
       },
       overlay(v, a, o) {
         const { W, H } = v;
-        const ember = 3 + a.kick * 6;
+        const ember = 3 + a.kickS * 6;
         o.save();
         o.fillStyle = hsl(5, 100, 55, 0.95);
         o.shadowColor = 'red'; o.shadowBlur = 14;
@@ -233,14 +233,14 @@ window.FC = window.FC || {};
       name: 'Warp Rays',
       frame(v, a) {
         const { ctx, W, H } = v;
-        feedback(v, { zoom: 1.045 + a.bass * 0.03, alpha: 0.88, fade: 'rgba(0,0,0,1)' });
+        feedback(v, { zoom: 1.018 + a.bassS * 0.012, alpha: 0.9, fade: 'rgba(0,0,0,1)' });
         const cx = W / 2, cy = H / 2;
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        const count = 6 + Math.round(a.level * 14);
+        const count = 3 + Math.round(a.levelS * 8 + a.kickS * 4);
         for (let i = 0; i < count; i++) {
-          const ang = v.rand() * TAU, r0 = 4 + v.rand() * 20, r1 = r0 + 20 + v.rand() * (40 + a.treble * 120);
-          ctx.strokeStyle = hsl(140 + v.rand() * 60 + Math.sin(v.t * 0.2) * 30, 70, 35 + v.rand() * 30, 0.5);
+          const ang = v.rand() * TAU, r0 = 4 + v.rand() * 20, r1 = r0 + 12 + v.rand() * (24 + a.treble * 60);
+          ctx.strokeStyle = hsl(140 + v.rand() * 60 + Math.sin(v.ph * 0.2) * 30, 70, 35 + v.rand() * 30, 0.5);
           ctx.lineWidth = 1 + v.rand() * 3;
           ctx.beginPath();
           ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0 * 0.6);
@@ -276,9 +276,9 @@ window.FC = window.FC || {};
         ctx.lineWidth = 1.6 + a.bass * 2;
         for (let arm = 0; arm < 8; arm++) {
           ctx.save();
-          ctx.rotate(arm * TAU / 8 + v.t * 0.15);
+          ctx.rotate(arm * TAU / 8 + v.ph * 0.12);
           if (arm % 2) ctx.scale(1, -1);
-          ctx.strokeStyle = cols[(arm + Math.floor(v.t / 4)) % cols.length];
+          ctx.strokeStyle = cols[(arm + Math.floor(v.ph / 4)) % cols.length];
           ctx.beginPath();
           for (let i = 0; i < n; i++) {
             const r = 0.06 * R + (i / (n - 1)) * R * 0.5;
@@ -289,7 +289,7 @@ window.FC = window.FC || {};
           ctx.restore();
         }
         ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(0, 0, 0.05 * R * (1 + a.kick * 0.4), 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 0.05 * R * (1 + a.kickS * 0.4), 0, TAU); ctx.stroke();
         ctx.restore();
       },
     },
@@ -299,12 +299,16 @@ window.FC = window.FC || {};
       name: 'Plasma',
       frame(v, a) {
         const { ctx, W, H } = v;
-        const PW = 96, PH = 48, st = v.state;
+        const PW = 128, PH = 64, st = v.state;
         if (!st.small) {
           st.small = document.createElement('canvas'); st.small.width = PW; st.small.height = PH;
           st.sctx = st.small.getContext('2d'); st.img = st.sctx.createImageData(PW, PH);
+          st.p = 0;
         }
-        const d = st.img.data, t = v.t, twist = 2.2 + a.bass * 2.5, hue0 = t * 12;
+        // Its own clock: always moving, faster in loud passages (smoothed, so it never jerks)
+        st.p += v.dt * (0.3 + 0.8 * a.levelS);
+        const d = st.img.data, t = st.p, twist = 2.2 + a.bassS * 1.2, hue0 = t * 18;
+        const glow = 0.5 + 0.12 * a.mid + 0.25 * a.kickS;                 // brightens on the beat
         for (let y = 0; y < PH; y++) {
           for (let x = 0; x < PW; x++) {
             const nx = (x - PW / 2) / (PH / 2), ny = (y - PH / 2) / (PH / 2);
@@ -312,7 +316,7 @@ window.FC = window.FC || {};
             const val = Math.sin(th * 3 + t) + Math.sin(r * 4.5 - t * 1.7 + Math.sin(th * 2 + t * 0.5)) +
                         Math.sin(nx * 2.2 + t * 0.9) * 0.5;
             const h = (hue0 + val * 70 + r * 40) % 360;
-            const light = Math.min(1, r * 1.6) * (0.55 + 0.15 * a.mid);   // dark eye in the middle
+            const light = Math.min(1, r * (1.4 + 0.5 * a.kickS)) * glow;   // dark eye in the middle
             const [rr, gg, bb] = hslRgb(h / 360, 0.85, light * 0.6);
             const i = (y * PW + x) * 4;
             d[i] = rr; d[i + 1] = gg; d[i + 2] = bb; d[i + 3] = 255;
@@ -331,13 +335,14 @@ window.FC = window.FC || {};
       name: 'Red Spiral',
       frame(v, a) {
         const { ctx, W, H } = v;
-        feedback(v, { zoom: 0.995, rot: 0.01, alpha: 0.55, fade: 'rgba(10,0,0,1)' });
+        feedback(v, { zoom: 0.997, rot: 0.003, alpha: 0.55, fade: 'rgba(10,0,0,1)' });
+        v.state.spin = (v.state.spin || 0) + v.dt * (0.3 + a.bassS * 0.4);
         const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) * 0.55, arms = 6, turns = 1.6;
         const b = Math.log(R / 4) / (turns * TAU);          // r = 4·e^(bθ) reaches R at the end
         ctx.save();
         ctx.lineCap = 'round';
         for (let arm = 0; arm < arms; arm++) {
-          const rot = arm * TAU / arms + v.t * (0.7 + a.bass * 0.6);
+          const rot = arm * TAU / arms + v.state.spin;
           let px = cx, py = cy;
           for (let k = 1; k <= 90; k++) {
             const th = (k / 90) * turns * TAU, r = 4 * Math.exp(b * th);
@@ -357,7 +362,7 @@ window.FC = window.FC || {};
         o.lineJoin = 'round';
         for (let bolt = 0; bolt < 3; bolt++) {           // jagged lightning from the waveform
           o.save();
-          o.rotate(v.t * 0.5 + bolt * TAU / 3 + Math.sin(v.t * 1.3 + bolt) * 0.4);
+          o.rotate(v.ph * 0.3 + bolt * TAU / 3 + Math.sin(v.ph * 0.9 + bolt) * 0.4);
           o.beginPath();
           for (let i = 0; i < n; i += 2) {
             const r = (i / (n - 1)) * R * 0.8 * (0.5 + a.level * 0.6);
@@ -370,11 +375,117 @@ window.FC = window.FC || {};
           o.restore();
         }
         o.fillStyle = '#fff';
-        o.beginPath(); o.arc(0, 0, 2 + a.kick * 3, 0, TAU); o.fill();
+        o.beginPath(); o.arc(0, 0, 2 + a.kickS * 3, 0, TAU); o.fill();
         o.restore();
       },
     },
   };
+
+  // ---- the Pi's EQ styles on the flip-board and e-ink screens -----------------------------
+  // The same pictures as plugins/now_playing/eq.py, sampled on a grid of tiles and drawn as
+  // split flaps (flip board) or as ink dots on paper (e-ink). cell(c, r) → [r,g,b] or null.
+  const hsv = (h, s, v) => {
+    h = ((h % 1) + 1) % 1;
+    const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+    const [r, g, b] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][i % 6];
+    return [r * 255, g * 255, b * 255];
+  };
+  const barColour = (b, frac, hue) => hsv(b / BANDS * 0.85 + hue, 1, 0.55 + 0.45 * frac);
+  const WHITE = [235, 235, 235];
+
+  function drawTiles(v, cols, rows, cell) {
+    const { ctx, W } = v, H = v.VH, eink = v.skin === 'eink';
+    const tw = W / cols, th = H / rows;
+    ctx.fillStyle = eink ? '#e8e4d8' : '#0b0b0c';
+    ctx.fillRect(0, 0, W, v.H);
+    const gap = Math.max(1, Math.min(tw, th) * (eink ? 0.16 : 0.1));
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const col = cell(c, r), x = c * tw + gap / 2, y = r * th + gap / 2, w = tw - gap, h = th - gap;
+        if (eink) {
+          if (!col) continue;
+          ctx.fillStyle = FC.inkColor ? FC.inkColor(col.map(Math.round), true) : `rgb(${col.map(Math.round)})`;
+          ctx.fillRect(x, y, w, h);
+        } else {
+          ctx.fillStyle = col ? `rgb(${col.map(Math.round)})` : '#1b1b1d';
+          ctx.fillRect(x, y, w, h);
+          ctx.fillStyle = 'rgba(255,255,255,.06)';           // the upper flap catches the light
+          ctx.fillRect(x, y, w, h / 2);
+          ctx.fillStyle = 'rgba(0,0,0,.6)';                  // the hinge
+          ctx.fillRect(x, y + h / 2 - Math.max(0.5, h * 0.03), w, Math.max(1, h * 0.06));
+        }
+      }
+    }
+  }
+
+  const BOARD = {
+    eq: {
+      frame(v, a) {
+        const cols = 48, rows = 16, hue = v.state.hue;      // 3 columns per band: 2 lit + a gap
+        drawTiles(v, cols, rows, (c, r) => {
+          if (c % 3 === 2) return null;
+          const b = Math.floor(c / 3), up = rows - 1 - r;
+          const lit = Math.round(a.bands[b] * rows), pk = Math.round(a.peaks[b] * rows);
+          if (up < lit) return barColour(b, up / (rows - 1), hue);
+          return pk > lit && up === pk - 1 ? WHITE : null;
+        });
+      },
+    },
+    eq_mirror: {
+      frame(v, a) {
+        const cols = 48, rows = 16, half = rows / 2, hue = v.state.hue;
+        drawTiles(v, cols, rows, (c, r) => {
+          if (c % 3 === 2) return null;
+          const b = Math.floor(c / 3), lit = Math.round(a.bands[b] * half), down = r >= half;
+          const s = down ? r - half : half - 1 - r;
+          if (s < lit) {
+            const col = hsv(0.5 + 0.35 * s / (half - 1) + hue, 0.85, 0.6 + 0.4 * s / (half - 1));
+            return down ? col.map((x) => x * 0.4) : col;
+          }
+          const pk = Math.round(a.peaks[b] * half);
+          return !down && pk > lit && s === pk - 1 ? WHITE : null;
+        });
+      },
+    },
+    eq_wave: {
+      frame(v, a) {
+        const cols = 64, rows = 22, st = v.state, w = a.wave, n = w.length;
+        const amp = (rows / 2 - 1.5) * (0.35 + 0.65 * a.level);
+        const ys = [];
+        for (let c = 0; c < cols; c++) ys.push(Math.round(Math.max(0, Math.min(rows - 1, (rows - 1) / 2 + amp * w[Math.round(c / (cols - 1) * (n - 1))]))));
+        st.trail = [ys, ...(st.trail || [])].slice(0, v.skin === 'eink' ? 1 : 4);   // phosphor trails (not on paper)
+        const green = hsv(0.36 + st.hue, 0.7, 1);
+        drawTiles(v, cols, rows, (c, r) => {
+          for (let k = 0; k < st.trail.length; k++) {
+            const t = st.trail[k], y = t[c], p = c ? t[c - 1] : y;
+            if (r >= Math.min(y, p) && r <= Math.max(y, p)) return green.map((x) => x * Math.pow(0.55, k));
+          }
+          return null;
+        });
+      },
+    },
+    eq_burst: {
+      frame(v, a) {
+        const cols = 64, rows = 30, st = v.state;
+        st.spin = (st.spin || 0) + v.dt * 0.15 * 1.5;
+        const core = 1 + 2 * a.bands[0];
+        drawTiles(v, cols, rows, (c, r) => {
+          const dx = c + 0.5 - 32, dy = (r + 0.5 - rows / 2) / 0.55, dist = Math.hypot(dx, dy);
+          if (dist <= core) return WHITE;
+          if (dist < 3) return null;
+          let ang = Math.atan2(dy, dx) - st.spin;
+          ang = ((ang % TAU) + TAU) % TAU;
+          const k = Math.round(ang / TAU * 32) % 32, off = Math.abs(ang - k * TAU / 32);
+          if (Math.min(off, TAU - off) * dist > 0.75) return null;       // only near the spoke's line
+          const q = k % 16;
+          const band = Math.min(BANDS - 1, (q < 8 ? q : 15 - q) * 2 + Math.floor(k / 16));
+          if (dist > 4 + a.bands[band] * 38) return null;
+          return hsv(band / BANDS * 0.8 + st.hue, 1, 1 - 0.6 * Math.min(1, dist / 31));
+        });
+      },
+    },
+  };
+
   const CYCLE = ['vortex', 'spectrum', 'rays', 'kaleido', 'plasma', 'reflection', 'spiral'];
   FC.VIZ_PRESETS = PRESETS;
 
@@ -403,10 +514,15 @@ window.FC = window.FC || {};
       this.bctx = this.buf.getContext('2d');
       this.info = document.createElement('div');
       this.info.id = 'viz-info';
+      this.bar = document.createElement('div');            // progress, with show_info
+      this.bar.id = 'viz-progress';
+      this.bar.innerHTML = '<span></span>';
       this.paused = document.createElement('div');
       this.paused.id = 'viz-paused';
       this.paused.innerHTML = '<span></span><span></span>';
-      root.append(this.canvas, this.info, this.paused);
+      root.append(this.canvas, this.info, this.bar, this.paused);
+      this.screen = 'led';
+      this.sm = { bass: 0, level: 0, kick: 0 };              // smoothed audio, for motion
       this.active = false;
       this.model = null;
       this.analyzer = null;
@@ -431,17 +547,42 @@ window.FC = window.FC || {};
       }
     }
 
-    // model: Now Playing's describe() (style "viz_<preset>"), or null to hide
+    // The screen style: the Pi's EQ styles are drawn here on the flip board and e-ink (the LED
+    // screen shows the Pi's own pixels for them)
+    setScreen(screen) {
+      if (screen === this.screen) return;
+      this.screen = screen;
+      const m = this.model || this.lastModel;
+      this.model = null;
+      this.choice = null;
+      this.setModel(m);
+    }
+
+    // What to draw for a Now Playing model: [preset key, board skin or null], or null for nothing
+    pick(model) {
+      const style = String((model && model.style) || '');
+      if (style.startsWith('viz_')) return [style.slice(4), null];
+      const eq = style === 'eq_text' ? 'eq' : style;
+      if (BOARD[eq] && (this.screen === 'flipboard' || this.screen === 'eink')) return ['board:' + eq, this.screen];
+      return null;
+    }
+
+    // model: Now Playing's describe() (style "viz_<preset>", or an EQ style on a board screen), or null to hide
     setModel(model) {
-      const on = !!model && String(model.style || '').startsWith('viz_');
+      this.lastModel = model;
+      const pick = model ? this.pick(model) : null;
+      const on = !!pick;
       if (on !== this.active) {
         this.active = on;
         document.body.classList.toggle('viz-on', on);
         if (on) { this.resize(); this.last = 0; requestAnimationFrame(this.loop); }
       }
-      if (!on) { this.model = null; return; }
+      if (!on) { this.model = null; document.body.classList.remove('viz-strip', 'viz-keep'); return; }
+      const now = performance.now();
       const key = `${model.title}|${model.artist}`;
-      if (key !== this.trackKey) {
+      const pos = Number(model.position) || 0;
+      const newSong = key !== this.trackKey;
+      if (newSong) {
         this.trackKey = key;
         this.seed = (model.seed || 1) >>> 0;
         this.analyzer = new Analyzer(model.features, this.seed);
@@ -449,15 +590,31 @@ window.FC = window.FC || {};
         this.showInfo();
         if (this.choice === 'cycle') this.pickCycle(true);
       }
+      // A steady clock: follow our own time between polls, and only re-sync to the app's
+      // position when it drifts (a seek, a pause) — re-anchoring every poll made it stutter
+      const local = this.pos0 == null ? null : this.pos0 + (this.model && !this.model.paused ? (now - this.t0) / 1000 : 0);
+      if (newSong || local == null || !!model.paused !== !!(this.model && this.model.paused) || Math.abs(local - pos) > 0.75) {
+        this.pos0 = pos;
+        this.t0 = now;
+      } else if (this.model && !this.model.paused) {
+        this.pos0 = local;
+        this.t0 = now;
+      }
       this.model = model;
-      this.pos0 = Number(model.position) || 0;
-      this.t0 = performance.now();
-      const choice = String(model.style).slice(4);
+      const [choice, skin] = pick;
+      this.skin = skin;
       if (choice !== this.choice) {
         this.choice = choice;
         if (choice === 'cycle') this.pickCycle(true);
-        else this.setPreset(PRESETS[choice] ? choice : 'vortex');
+        else this.setPreset(choice.startsWith('board:') || PRESETS[choice] ? choice : 'vortex');
       }
+      // Song info: kept on screen with show_info (the board styles in a strip under the
+      // visual, like the Pi), otherwise only for a few seconds when a song starts
+      const keep = model.show_info !== false;
+      document.body.classList.toggle('viz-strip', !!skin && keep);
+      document.body.classList.toggle('viz-keep', keep);
+      this.bar.firstChild.style.width = `${Math.round((model.progress || 0) * 1000) / 10}%`;
+      this.bar.style.visibility = model.progress == null ? 'hidden' : '';
       document.body.classList.toggle('viz-paused', !!model.paused);
     }
 
@@ -483,21 +640,32 @@ window.FC = window.FC || {};
 
     // Draw one frame at time `now` (ms); `dt` in seconds
     render(now, dt) {
-      const m = this.model, an = this.analyzer, p = PRESETS[this.preset];
+      const m = this.model, an = this.analyzer;
+      const board = String(this.preset || '').startsWith('board:');
+      const p = board ? BOARD[this.preset.slice(6)] : PRESETS[this.preset];
       if (!m || !an || !p || !this.W) return;
       const playing = !m.paused;
       const t = this.pos0 + (playing ? (now - this.t0) / 1000 : 0);
       an.levels(t, playing, dt);
-      if (!playing) return;                            // paused: hold the last frame (dimmed in CSS)
+      if (!playing && !board) return;                  // paused: hold the last frame (dimmed in CSS)
       if (this.choice === 'cycle' && now - this.cycleAt > 30000) this.pickCycle(false);
-      const b = an.shown;
+      const b = an.shown, sm = this.sm;
+      const bass = avg(b, 0, 3), level = avg(b, 0, 16);
+      // Smoothed copies for anything that moves things (speeds, sizes): raw levels jump every beat
+      const k = 1 - Math.exp(-dt * 4), kk = 1 - Math.exp(-dt * 14);
+      sm.bass += (bass - sm.bass) * k; sm.level += (level - sm.level) * k; sm.kick += (an.kick - sm.kick) * kk;
+      this.ph = (this.ph || 0) + dt * (0.6 + 0.8 * sm.level);    // a music-paced clock for motion
       const audio = {
         bands: b, peaks: an.peaks, kick: an.kick,
-        bass: avg(b, 0, 3), mid: avg(b, 4, 10), treble: avg(b, 10, 16), level: avg(b, 0, 16),
+        bass, mid: avg(b, 4, 10), treble: avg(b, 10, 16), level,
+        bassS: sm.bass, levelS: sm.level, kickS: sm.kick,
         wave: an.wave(this.wave.length, t, this.wave),
       };
+      this.state.hue = ((this.state.hue || 0) + (playing ? dt * 0.015 : 0)) % 1;
+      const strip = board && document.body.classList.contains('viz-strip');
       const v = { ctx: this.ctx, buf: this.buf, bctx: this.bctx, scene: this.scene, W: this.W, H: this.H,
-                  t, dt, state: this.state, rand: this.rand, seed: this.seed };
+                  VH: strip ? Math.round(this.H * 0.74) : this.H, skin: this.skin,
+                  t, ph: this.ph, dt, state: this.state, rand: this.rand, seed: this.seed };
       p.frame(v, audio);
       this.octx.globalCompositeOperation = 'copy';
       this.octx.drawImage(this.scene, 0, 0);
@@ -507,10 +675,14 @@ window.FC = window.FC || {};
 
     loop(ts) {
       if (!this.active) return;
-      const dt = this.last ? Math.min(0.1, (ts - this.last) / 1000) : 1 / 60;
+      requestAnimationFrame(this.loop);
+      // At most 60 frames a second (a 120 Hz display ran the feedback presets twice as fast);
+      // e-ink, like a real panel, updates a few times a second
+      const every = this.skin === 'eink' ? 250 : 1000 / 61;
+      if (this.last && ts - this.last < every) return;
+      const dt = this.last ? Math.min(0.25, (ts - this.last) / 1000) : 1 / 60;
       this.last = ts;
       this.render(ts, dt);
-      requestAnimationFrame(this.loop);
     }
 
     // Tests and snapshots (offscreen windows don't run requestAnimationFrame): step n frames

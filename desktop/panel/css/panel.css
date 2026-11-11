@@ -26,6 +26,22 @@ body.viz-on #viz-info.on, body.viz-on #case:hover #viz-info { opacity: 1; }
               gap: 1.2vmin; height: 16%; aspect-ratio: 1; align-items: center; justify-content: center; pointer-events: none; }
 #viz-paused span { width: 26%; height: 100%; border-radius: 3px; background: rgba(255, 255, 255, .85); }
 body.viz-on.viz-paused #viz-paused { display: flex; }
+/* show_info: the song stays up, with a progress bar along the bottom */
+body.viz-on.viz-keep #viz-info { opacity: 1; }
+#viz-progress { position: absolute; left: 4%; right: 4%; bottom: 3.5%; height: max(2px, 1.1%); z-index: 4; display: none;
+                background: rgba(255, 255, 255, .14); border-radius: 2px; overflow: hidden; pointer-events: none; }
+#viz-progress span { display: block; height: 100%; width: 0; background: #2fd25a; transition: width 1s linear; }
+body.viz-on.viz-keep #viz-progress { display: block; }
+body.viz-paused #viz-progress span { background: #ebA01e; }
+/* The Pi's EQ styles on the flip board / e-ink: the song in a strip under the visual, like the Pi */
+body.viz-strip #viz-info { top: auto; bottom: 8.5%; left: 4%; max-width: 92%; }
+body.viz-strip[data-screen="flipboard"] #viz-info { color: #f2f0e8; text-shadow: none; font-family: "DIN Condensed", "Arial Narrow", sans-serif;
+                                                    font-weight: 700; font-size: clamp(10px, 4.6vmin, 30px); letter-spacing: .08em; }
+body.viz-on[data-screen="eink"] #viz-info { color: #22221f; text-shadow: none; text-transform: none; letter-spacing: 0;
+                                           font: 600 clamp(10px, 4.4vmin, 28px) Charter, Georgia, serif; }
+body.viz-on[data-screen="eink"] #viz-progress { background: rgba(34, 34, 31, .15); }
+body.viz-on[data-screen="eink"] #viz-progress span { background: #22221f; transition: none; }
+body.viz-on[data-screen="eink"].viz-paused #viz { filter: none; }
 
 /* ---- Now Playing ⏮ ⏯ ⏭ (shown on hover while the module is up) ------------- */
 #np-controls { position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
@@ -106,3 +122,16 @@ body[data-screen="eink"] #screen { background: #e8e4d8; }
   80%  { opacity: .6; background: #e8e4d8; }
   100% { opacity: 0; }
 }
+
+/* ---- resize zones (index.html .grip): the cursor here; the resize itself is native ---- */
+/* Same sizes as GRIP_CORNER / GRIP_EDGE in shell_mac.py. A near-transparent fill, because a  */
+/* transparent window lets clicks on fully clear pixels fall through to what's behind it.   */
+.grip { position: fixed; z-index: 50; background: rgba(0, 0, 0, .01); }
+body.fs .grip, body.preview .grip { display: none; }
+.g-nw, .g-ne, .g-se, .g-sw { width: 26px; height: 26px; }
+.g-nw { left: 0; top: 0; cursor: nwse-resize; }      .g-se { right: 0; bottom: 0; cursor: nwse-resize; }
+.g-ne { right: 0; top: 0; cursor: nesw-resize; }     .g-sw { left: 0; bottom: 0; cursor: nesw-resize; }
+.g-n, .g-s { left: 26px; right: 26px; height: 9px; cursor: ns-resize; }
+.g-n { top: 0; }  .g-s { bottom: 0; }
+.g-e, .g-w { top: 26px; bottom: 26px; width: 9px; cursor: ew-resize; }
+.g-e { right: 0; }  .g-w { left: 0; }

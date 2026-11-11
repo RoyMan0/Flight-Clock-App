@@ -24,7 +24,6 @@ def datas(core, desktop):
         (os.path.join(core, "espn.mp3"), "."),
         (os.path.join(core, "config", "config.example.json"), "config"),
         (os.path.join(core, "config", "secrets.example.json"), "config"),
-        (os.path.join(core, "plugins", "transit", "cta_rail_order.json"), os.path.join("plugins", "transit")),
         (os.path.join(core, "web", "templates"), os.path.join("web", "templates")),
         (os.path.join(desktop, "panel"), os.path.join("desktop", "panel")),
     ]
@@ -32,6 +31,15 @@ def datas(core, desktop):
         path = os.path.join(core, "web", "static", name)
         if os.path.isfile(path):
             out.append((path, os.path.join("web", "static")))
+    # Plugin data files committed next to the code (snow_report/resorts.json — the resort
+    # search index —, transit/cta_rail_order.json …). Plugins write runtime data under
+    # DATA_ROOT, never here, so a plugin folder holds no personal files.
+    plugins = os.path.join(core, "plugins")
+    for dirpath, dirnames, filenames in os.walk(plugins):
+        dirnames[:] = [d for d in dirnames if d not in ("__pycache__", "data") and not d.startswith(".")]
+        for fn in filenames:
+            if fn.endswith(".json"):
+                out.append((os.path.join(dirpath, fn), os.path.relpath(dirpath, core)))
 
     # Library data files PyInstaller's own hooks don't pick up
     for pkg in ("folium", "branca", "xyzservices", "recurring_ical_events", "x_wr_timezone", "tzdata"):

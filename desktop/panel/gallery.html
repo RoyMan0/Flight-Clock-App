@@ -68,7 +68,15 @@
     const grid = $('grid');
     grid.innerHTML = '';
     const screen = $('screen').value, kase = $('case').value, color = $('color').value;
-    if (tab === 'modules') {
+    if (tab === 'modules' && screen === 'led') {
+      // The LED screen shows each module's real 64×32 pixels, drawn by the module itself from
+      // live data; the sample data here only feeds the flip-board and e-ink layouts
+      grid.style.setProperty('--w', '100%');
+      grid.innerHTML = `<div class="card"><div class="name">LED panel</div>
+        <p>The LED screen shows each module exactly as the Pi's panel draws it, from live data, so it
+        can't be previewed with sample data here. To see one: ✈ menu → Show Module, or the Display page.
+        Pick Flip board or Colour e-ink above to browse every module with sample data.</p></div>`;
+    } else if (tab === 'modules') {
       const size = caseOf(kase).size;
       grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '340px' : '260px');
       FC.FIXTURES.forEach((f, i) => grid.appendChild(card(f.label, f.plugin, url(i, screen, kase, color), size)));
@@ -77,11 +85,17 @@
       grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '420px' : '300px');
       for (const [id, p] of Object.entries(FC.VIZ_PRESETS))
         grid.appendChild(card(p.name, 'Settings → Now Playing → Style', url(np, screen, kase, color) + '&viz=' + id, size));
+      // The Pi's EQ styles, as this screen draws them (the LED screen shows the Pi's own pixels)
+      if (screen !== 'led')
+        for (const [id, name] of [['eq', 'EQ bars'], ['eq_mirror', 'EQ mirror'], ['eq_wave', 'Scope'], ['eq_burst', 'Starburst']])
+          for (const info of [1, 0])
+            grid.appendChild(card(name, info ? 'with the song' : 'song info off', url(np, screen, kase, color) + `&viz=${id}&info=${info}`, size));
     } else {
       grid.style.setProperty('--w', '280px');
       for (const c of catalog.cases) {
         for (const col of c.colors.length ? c.colors : [{ id: '', name: '' }])
-          grid.appendChild(card(c.name, col.name, url(0, screen, c.id, col.id), c.size));
+          grid.appendChild(card(c.name, col.name + (screen === 'led' ? ' · sample pixels' : ''),
+                                url(0, screen, c.id, col.id), c.size));
       }
     }
   }

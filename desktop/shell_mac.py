@@ -5,8 +5,8 @@ icon, and the menus that drive them.
 Two window modes (Settings → Mac App, or the menu):
   window   the panel is an ordinary window (frameless, resizable) and the app has
            a Dock icon; the menu bar icon opens the menu.
-  menubar  no Dock icon. Clicking the menu bar icon drops the panel down under it
-           (it hides again when you click elsewhere); right-click opens the menu.
+  menubar  no Dock icon. The menu bar icon opens the menu (Show/Hide Panel); the panel
+           drops down under the icon the first time, then stays wherever it's put.
 
 pywebview owns the Cocoa main thread; anything touching AppKit from another
 thread goes through AppHelper.callAfter.
@@ -98,6 +98,96 @@ def _patch_app_delegate(shell):
     ])
 
 
+# Resize zones of the frameless panel (window points). macOS's own resize border is a few
+# points wide and only where the window is opaque, which the cases' rounded corners aren't.
+GRIP_CORNER, GRIP_EDGE = 26, 9
+
+# Kept in the web views' right-click menu (pywebview empties it); e.g. to copy a command
+_KEEP_MENU_ITEMS = ("Copy", "Cut", "Paste", "SelectAll", "Select All", "LookUp", "Look Up")
+
+
+def _patch_webview(shell):
+    """Native resize from the panel's corners and edges (with the case's ratio), and Copy /
+    Paste in the right-click menu of the Settings window."""
+    Host = BrowserView.WebKitHost
+    orig_down, orig_drag, orig_up = Host.mouseDown_, Host.mouseDragged_, Host.mouseUp_
+    state = {}                                    # the resize in progress
+
+    def zone(win, event):
+        if not shell.panel or win is not shell.panel.native:
+            return None
+        if win.styleMask() & AppKit.NSWindowStyleMaskFullScreen:
+            return None
+        p, size = event.locationInWindow(), win.frame().size
+        near_l, near_r = p.x < GRIP_CORNER, p.x > size.width - GRIP_CORNER
+        near_b, near_t = p.y < GRIP_CORNER, p.y > size.height - GRIP_CORNER
+        if (near_l or near_r) and (near_b or near_t):
+            return (-1 if near_l else 1, 1 if near_t else -1)
+        if p.x < GRIP_EDGE or p.x > size.width - GRIP_EDGE:
+            return (-1 if p.x < GRIP_EDGE else 1, 0)
+        if p.y < GRIP_EDGE:
+            return (0, -1)
+        if p.y > size.height - GRIP_EDGE:
+            return (0, 1)
+        return None
+
+    def mouseDown_(self, event):
+        win = self.window()
+        z = zone(win, event)
+        if z:
+            state.update(zone=z, start=AppKit.NSEvent.mouseLocation(), frame=win.frame(), win=win)
+            return                                # not a click on the page, and not a window drag
+        state.clear()
+        orig_down(self, event)
+
+    def mouseDragged_(self, event):
+        if not state:
+            return orig_drag(self, event)
+        win, f0, (sx, sy) = state["win"], state["frame"], state["zone"]
+        now = AppKit.NSEvent.mouseLocation()
+        dx, dy = now.x - state["start"].x, now.y - state["start"].y
+        cw, ch = settings.CASES[shell.prefs["case"]]["size"]
+        ratio = cw / ch
+        w0, h0 = f0.size.width, f0.size.height
+        by_x = w0 + sx * dx
+        by_y = (h0 + sy * dy) * ratio
+        if sx and sy:                             # corner: whichever way the mouse moved more
+            nw = by_x if abs(by_x - w0) >= abs(by_y - w0) else by_y
+        else:
+            nw = by_x if sx else by_y
+        mw, _mh = settings.CASES[shell.prefs["case"]]["min"]
+        screen = (win.screen() or AppKit.NSScreen.mainScreen()).visibleFrame()
+        nw = max(mw, min(nw, screen.size.width, screen.size.height * ratio))
+        nh = nw / ratio
+        x = f0.origin.x + w0 - nw if sx < 0 else f0.origin.x          # the opposite edge stays put
+        top = f0.origin.y + h0
+        y = f0.origin.y if sy > 0 else top - nh
+        win.setFrame_display_(Foundation.NSMakeRect(x, y, nw, nh), True)
+
+    def mouseUp_(self, event):
+        if state:
+            state.clear()
+            shell._save_panel_frame_soon()
+            return
+        orig_up(self, event)
+
+    def willOpenMenu_withEvent_(self, menu, event):
+        # pywebview removes every item (no Reload / Inspect); keep the editing ones
+        for item in list(menu.itemArray()):
+            ident = str(item.identifier() or "")
+            if item.isSeparatorItem() or not any(k in ident or k == str(item.title()) for k in _KEEP_MENU_ITEMS):
+                menu.removeItem_(item)
+        while menu.numberOfItems() and menu.itemAtIndex_(0).isSeparatorItem():
+            menu.removeItemAtIndex_(0)
+
+    sig = b"v@:@"
+    Host.mouseDown_ = objc.selector(mouseDown_, selector=b"mouseDown:", signature=sig)
+    Host.mouseDragged_ = objc.selector(mouseDragged_, selector=b"mouseDragged:", signature=sig)
+    Host.mouseUp_ = objc.selector(mouseUp_, selector=b"mouseUp:", signature=sig)
+    Host.willOpenMenu_withEvent_ = objc.selector(willOpenMenu_withEvent_, selector=b"willOpenMenu:withEvent:",
+                                                 signature=b"v@:@@")
+
+
 # ----------------------------------------------------------------------
 # JS bridge for the panel page (window.pywebview.api.*)
 # ----------------------------------------------------------------------
@@ -164,6 +254,7 @@ class Shell(ShellBase):
 
     def _setup_native(self):
         _patch_app_delegate(self)
+        _patch_webview(self)
         self._target = _Target.alloc().initWithShell_(self)
         self._make_status_item()
         if self.panel:
@@ -194,13 +285,7 @@ class Shell(ShellBase):
         button.sendActionOn_(AppKit.NSEventMaskLeftMouseUp | AppKit.NSEventMaskRightMouseUp)
 
     def _status_clicked(self):
-        event = AppKit.NSApp.currentEvent()
-        right = event is not None and (
-            event.type() == AppKit.NSEventTypeRightMouseUp
-            or event.modifierFlags() & AppKit.NSEventModifierFlagControl)
-        if self.panel and self.prefs["window_mode"] == "menubar" and not right:
-            self.toggle_panel(under_status_item=True)
-            return
+        # Any click opens the menu (Show/Hide Panel is its first item), in both window modes
         item = self._status_item
         item.setMenu_(self._build_menu())
         item.button().performClick_(None)        # shows the menu attached to the item
@@ -257,6 +342,7 @@ class Shell(ShellBase):
         if under_status_item:
             self._position_under_status_item(win)
         win.makeKeyAndOrderFront_(None)
+        self._apply_window_level()
         AppKit.NSApp.activateIgnoringOtherApps_(True)
 
     def hide_panel(self):
@@ -267,7 +353,9 @@ class Shell(ShellBase):
         if self.panel and self.panel.native and self.panel.native.isVisible():
             self.hide_panel()
         else:
-            self.show_panel(under_status_item=under_status_item or self.prefs["window_mode"] == "menubar")
+            # Menu-bar mode: the first time (no saved place yet) it drops down under the icon
+            first = self.prefs["window_mode"] == "menubar" and not self.prefs.get("panel_frame")
+            self.show_panel(under_status_item=under_status_item or first)
 
     def toggle_fullscreen(self):
         if self.panel:
@@ -298,11 +386,9 @@ class Shell(ShellBase):
         win.setFrameOrigin_(Foundation.NSMakePoint(x, y))
 
     def _panel_resigned_key(self):
-        # Menu-bar mode behaves like a drop-down: clicking elsewhere hides it
-        if self.prefs["window_mode"] == "menubar" and not self._quitting:
-            win = self.panel.native
-            if not (win.styleMask() & AppKit.NSWindowStyleMaskFullScreen):
-                self.hide_panel()
+        # Nothing to do: the panel stays up when another window is clicked, in both modes
+        # (menu-bar mode only drops the Dock icon). Kept as the hook for the notification.
+        pass
 
     def _apply_case_size(self, resize=True):
         """Keep the window to the case's shape; on a case change, reshape it around its top-left."""
@@ -343,8 +429,8 @@ class Shell(ShellBase):
         self._save_timer.start()
 
     def _save_panel_frame(self):
-        if not self.panel or not self.panel.native or self.prefs["window_mode"] == "menubar":
-            return                                   # menu-bar mode positions it under the icon each time
+        if not self.panel or not self.panel.native:
+            return
         win = self.panel.native
         if win.styleMask() & AppKit.NSWindowStyleMaskFullScreen:
             return
@@ -359,8 +445,6 @@ class Shell(ShellBase):
         self.prefs = settings.update(changes)
         if "launch_at_login" in changes and changes["launch_at_login"] != old["launch_at_login"]:
             self._set_launch_at_login(self.prefs["launch_at_login"])
-        if self.panel and old["window_mode"] == "menubar" and self.prefs["window_mode"] == "window":
-            AppHelper.callAfter(self._restore_panel_frame)     # back from under the menu bar icon
         AppHelper.callAfter(self._apply_window_prefs)
         if self.panel and self.prefs["case"] != old["case"]:
             AppHelper.callAfter(self._apply_case_size)
@@ -377,9 +461,21 @@ class Shell(ShellBase):
         win = self.panel.native
         if win.styleMask() & AppKit.NSWindowStyleMaskFullScreen:
             return
+        self._apply_window_level()
+        if not menubar and not win.isVisible():
+            win.makeKeyAndOrderFront_(None)
+        if not menubar:
+            app.activateIgnoringOtherApps_(True)
+
+    def _apply_window_level(self):
+        if not self.panel or not self.panel.native:
+            return
+        win = self.panel.native
+        if win.styleMask() & AppKit.NSWindowStyleMaskFullScreen:
+            return
         level = self.prefs["level"]
         behaviour = AppKit.NSWindowCollectionBehaviorFullScreenPrimary
-        if menubar or level == "floating":
+        if level == "floating":
             win.setLevel_(AppKit.NSFloatingWindowLevel)
             behaviour = AppKit.NSWindowCollectionBehaviorCanJoinAllSpaces | AppKit.NSWindowCollectionBehaviorFullScreenAuxiliary
         elif level == "desktop":
@@ -391,10 +487,6 @@ class Shell(ShellBase):
         else:
             win.setLevel_(AppKit.NSNormalWindowLevel)
         win.setCollectionBehavior_(behaviour)
-        if not menubar and not win.isVisible():
-            win.makeKeyAndOrderFront_(None)
-        if not menubar:
-            app.activateIgnoringOtherApps_(True)
 
     def _set_launch_at_login(self, enabled):
         try:

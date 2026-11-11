@@ -39,6 +39,7 @@
     body.classList.toggle('bezel', !!prefs.bezel);
     for (const [name, s] of Object.entries(screens)) s.show(name === prefs.screen);
     for (const s of Object.values(screens)) s.applyPrefs(prefs);
+    viz.setScreen(prefs.screen);
     lastBoard = '';
     resize();
     relayout();
@@ -185,11 +186,27 @@
   });
   document.addEventListener('dblclick', () => { if (window.pywebview) window.pywebview.api.toggle_fullscreen(); });
 
+  // Resize zones: on the Mac the native view handles the drag before the page sees it; on
+  // Windows the page starts it (and keeps the click off easy_drag, which would move the window)
+  for (const g of document.querySelectorAll('.grip')) {
+    g.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const api = window.pywebview && window.pywebview.api;
+      if (e.button === 0 && api && api.resize_start) api.resize_start(Number(g.dataset.x), Number(g.dataset.y));
+    });
+    g.addEventListener('dblclick', (e) => e.stopPropagation());
+  }
+  if (preview) body.classList.add('preview');
+
   if (preview) {
     const fx = FC.FIXTURES[Number(params.get('fixture'))] || FC.FIXTURES[0];
     state = { plugin: fx.plugin, model: fx.model };
-    if (params.get('viz') && fx.plugin === 'now_playing')       // ?viz=<preset>: preview a visualizer
-      state.model = { ...fx.model, style: 'viz_' + params.get('viz'), position: 42, seed: 7 };
+    if (params.get('viz') && fx.plugin === 'now_playing') {     // ?viz=<preset>: preview a visualizer,
+      const v = params.get('viz');                              // or one of the Pi's EQ styles (eq_*)
+      state.model = { ...fx.model, style: v.startsWith('eq') ? v : 'viz_' + v, position: 42, seed: 7,
+                      show_info: params.get('info') !== '0' };
+    }
     window.applyPrefs({
       screen: params.get('screen') || 'flipboard', case: params.get('case') || 'none',
       case_color: params.get('color') || '', led_style: params.get('led_style') || 'round',
