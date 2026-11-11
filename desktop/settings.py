@@ -43,7 +43,7 @@ CASES = {
     "midcentury": {"name": "Mid-century desk clock", "size": (640, 450), "min": (320, 225), "colors": {
         "mustard": "Mustard", "teal": "Teal", "orange": "Burnt orange", "olive": "Olive",
         "cherry": "Cherry red", "cream": "Cream"}},
-    "mac_se": {"name": "Vintage Mac SE style", "size": (440, 560), "min": (220, 280), "colors": {
+    "mac_se": {"name": "Vintage Mac SE style", "size": (440, 480), "min": (220, 240), "colors": {
         "beige": "Classic beige", "platinum": "Platinum"}},
     "imac_g3": {"name": "iMac G3 style", "size": (560, 560), "min": (280, 280), "colors": {
         "bondi": "Bondi Blue", "blueberry": "Blueberry", "strawberry": "Strawberry", "lime": "Lime",

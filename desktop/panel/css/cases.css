@@ -142,7 +142,7 @@ body[data-case="mac_se"] { --se: #ddd5bf; --se2: #cdc4ab; --se3: #b3a98e; --sehi
 body[data-case="mac_se"][data-color="platinum"] { --se: #e4e3dc; --se2: #d3d1c8; --se3: #b7b4a9; --sehi: #f6f5f0; }
 
 body[data-case="mac_se"] .c-body {
-  display: block; left: 3%; right: 3%; top: 1%; bottom: 1.5%; border-radius: 5.5% / 4.2%;
+  display: block; left: 3%; right: 3%; top: 1%; bottom: 1.5%; border-radius: 5.5% / 4.9%;
   background:
     var(--noise),
     linear-gradient(90deg, rgba(255,255,255,.35), transparent 4%, transparent 95%, rgba(0,0,0,.10)),
@@ -151,12 +151,12 @@ body[data-case="mac_se"] .c-body {
               inset 0 .3vh 0 rgba(255,255,255,.55), inset 0 -.4vh .6vh rgba(0,0,0,.12);
 }
 /* the moulded lip around the front face */
-body[data-case="mac_se"] .c-body::before { content: ""; position: absolute; inset: 1.1% 1.6% 7% 1.6%; border-radius: 4.5% / 3.6%;
+body[data-case="mac_se"] .c-body::before { content: ""; position: absolute; inset: 1.1% 1.6% 8.2% 1.6%; border-radius: 4.5% / 4.2%;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 0 1px rgba(0,0,0,.06); }
 
 /* tapered recess around the tube; its padding box is the dark glass */
 body[data-case="mac_se"] .c-a {
-  display: block; left: 9.4%; right: 9.4%; top: 7.6%; height: 37.6%; box-sizing: border-box; border-radius: 9% / 11%;
+  display: block; left: 9.4%; right: 9.4%; top: 8.9%; height: 43.9%; box-sizing: border-box; border-radius: 9% / 11%;
   border-style: solid; border-width: 3.2vh 3.6vw 2.2vh;
   border-color: color-mix(in srgb, var(--se3) 85%, black) var(--se2) color-mix(in srgb, var(--se) 55%, white) var(--se2);
   background: radial-gradient(ellipse 85% 80% at 50% 45%, #3b3f3c, #1c1f1d 62%, #0c0d0d) padding-box;
@@ -170,8 +170,8 @@ body[data-case="mac_se"] .c-a::before { content: ""; position: absolute; inset: 
 body[data-case="mac_se"] .c-a::after { content: ""; position: absolute; inset: 0; border-radius: 7% / 7%; pointer-events: none;
   background: radial-gradient(ellipse 70% 45% at 32% 18%, rgba(255,255,255,.10), transparent 70%); }
 /* the screen fills the glass, with a slim dark border (the window keeps the case's ratio,
-   so a 68% wide well is 2:1 at 26.71% of the height) */
-body[data-case="mac_se"] #well { left: 16%; width: 68%; top: 13.6%; height: 26.71%; }
+   so in the 440×480 case a 68% wide well is 2:1 at 31.17% of the height) */
+body[data-case="mac_se"] #well { left: 16%; width: 68%; top: 15.9%; height: 31.17%; }
 body[data-case="mac_se"] #screen { border-radius: 3.5% / 7%; }
 body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 3.5% / 7%; pointer-events: none; z-index: 6;
   background: repeating-linear-gradient(rgba(0,0,0,.14) 0 1px, transparent 1px 3px),
@@ -180,14 +180,14 @@ body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 
 
 /* badge: an engraved name under the tube's left edge */
 body[data-case="mac_se"] .c-b {
-  display: flex; align-items: center; left: 12.5%; width: 30%; top: 62%; height: 4%;
+  display: flex; align-items: center; left: 12.5%; width: 30%; top: 66%; height: 4.7%;
   font: italic 500 2.2vh/1 "Apple Garamond", Garamond, "Hoefler Text", Georgia, serif; letter-spacing: .02em;
   color: color-mix(in srgb, var(--se3) 80%, black); text-shadow: 0 1px 0 rgba(255,255,255,.6);
 }
 body[data-case="mac_se"] .c-b::after { content: "Flight Clock"; }
 /* floppy drive: a chamfered bezel, the slot, the eject pin-hole */
 body[data-case="mac_se"] .c-c {
-  display: block; left: 50%; right: 12%; top: 61.5%; height: 5.2%; box-sizing: border-box; border-radius: .6vh;
+  display: block; left: 50%; right: 12%; top: 65.3%; height: 6.1%; box-sizing: border-box; border-radius: .6vh;
   border-style: solid; border-width: 1vh 1.2vw .7vh;
   border-color: var(--se3) var(--se2) color-mix(in srgb, var(--se) 50%, white) var(--se2);
   background: linear-gradient(#141412, #2c2b28) padding-box;
@@ -197,12 +197,12 @@ body[data-case="mac_se"] .c-c::after { content: ""; position: absolute; right: -
   border-radius: 50%; background: #3a3833; box-shadow: 0 1px 0 rgba(255,255,255,.55); }
 /* power/drive lamp, left of the slot */
 body[data-case="mac_se"] .c-d {
-  display: block; left: 45%; top: 63.7%; width: 1.4vw; height: .7vh; border-radius: 1px;
+  display: block; left: 45%; top: 67.9%; width: 1.4vw; height: .7vh; border-radius: 1px;
   background: #4e5b3a; box-shadow: inset 0 1px 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.5);
 }
 /* the foot: the bottom band steps back, with a shadowed groove above it */
 body[data-case="mac_se"] .c-f {
-  display: block; left: 3%; right: 3%; bottom: 1.5%; height: 6.5%; border-radius: 0 0 3.2vw 3.2vw / 0 0 2.2vh 2.2vh;
+  display: block; left: 3%; right: 3%; bottom: 1.5%; height: 7.6%; border-radius: 0 0 3.2vw 3.2vw / 0 0 2.2vh 2.2vh;
   background: var(--noise), linear-gradient(var(--se3), var(--se2) 30%, color-mix(in srgb, var(--se2) 85%, black));
   box-shadow: inset 0 .5vh .6vh rgba(0,0,0,.28), 0 -1px 0 rgba(255,255,255,.55);
 }
