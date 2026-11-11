@@ -99,13 +99,15 @@
     setTimeout(pollFrame, Math.max(0, 100 - (performance.now() - t0)));
   }
 
-  // ---- Now Playing ⏮ ⏭ ------------------------------------------------------------
+  // ---- Now Playing ⏮ ⏯ ⏭ ----------------------------------------------------------
   // Shown (on hover, see panel.css) only while Now Playing is up with a source that can skip
   const npMsg = document.getElementById('np-msg');
   let npMsgTimer = null;
   function npControls() {
     const on = !preview && !!state && state.plugin === 'now_playing' && !!(state.model && state.model.can_skip);
     body.classList.toggle('np-skip', on);
+    body.classList.toggle('np-paused', on && !!state.model.paused);
+    document.querySelector('.np-main').title = on && state.model.paused ? 'Play' : 'Pause';
   }
   function npSay(text) {
     npMsg.textContent = text;
@@ -122,11 +124,13 @@
       if (btn.classList.contains('busy')) return;
       btn.classList.add('busy');
       try {
-        const r = await fetch('/api/now_playing/skip', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                                         body: JSON.stringify({ direction: btn.dataset.dir }) }).then((r) => r.json());
-        if (!r.ok) npSay(r.error || "Couldn't change the song");
+        const action = btn.dataset.action;
+        const r = await fetch('/api/now_playing/control', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ action }) }).then((r) => r.json());
+        if (!r.ok) npSay(r.error || "Couldn't control the music");
+        else if (action === 'playpause') body.classList.toggle('np-paused');   // until the next poll confirms it
       } catch (err) {
-        npSay("Couldn't change the song");
+        npSay("Couldn't control the music");
       }
       setTimeout(() => btn.classList.remove('busy'), 400);
     });

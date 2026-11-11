@@ -474,9 +474,9 @@ class Shell(ShellBase):
         lat, lon = asyncio.run(find())
         return {"lat": lat, "lon": lon, "label": f"{lat:.3f}, {lon:.3f}"}
 
-    # --- media (Now Playing ⏮ ⏭) ---------------------------------------
+    # --- media (Now Playing ⏮ ⏯ ⏭) -------------------------------------
 
-    def media_control(self, source, direction):
+    def media_control(self, source, action):
         """app.media_cb: with the Spotify app running on this PC, press the media key (no
         Web API or Premium needed). False → the shared code uses the Web API (Spotify) or
         SSH (a Mac's Music app)."""
@@ -488,7 +488,7 @@ class Shell(ShellBase):
                 return False
         except Exception:
             return False
-        vk = 0xB0 if direction == "next" else 0xB1          # VK_MEDIA_NEXT_TRACK / VK_MEDIA_PREV_TRACK
+        vk = {"next": 0xB0, "previous": 0xB1, "playpause": 0xB3}[action]   # VK_MEDIA_NEXT_TRACK / PREV_TRACK / PLAY_PAUSE
         KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP = 0x1, 0x2
         ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY, 0)
         ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)

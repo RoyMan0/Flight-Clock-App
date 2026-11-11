@@ -800,7 +800,24 @@ FC.FIXTURES = [
    "art_url": null,
    "art_key": "",
    "has_art": false,
-   "progress": 0.37
+   "progress": 0.37,
+   "can_skip": true
+  }
+ },
+ {
+  "label": "Now playing (paused)",
+  "plugin": "now_playing",
+  "model": {
+   "title": "Clair de Lune",
+   "artist": "Claude Debussy",
+   "album": "Suite bergamasque",
+   "source": "spotify",
+   "art_url": null,
+   "art_key": "",
+   "has_art": false,
+   "progress": 0.62,
+   "can_skip": true,
+   "paused": true
   }
  },
  {

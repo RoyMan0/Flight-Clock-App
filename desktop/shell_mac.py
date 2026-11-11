@@ -500,15 +500,15 @@ class Shell(ShellBase):
         lat, lon = result["coords"]
         return {"lat": lat, "lon": lon, "label": f"{lat:.3f}, {lon:.3f}"}
 
-    # --- media (Now Playing ⏮ ⏭) ---------------------------------------
+    # --- media (Now Playing ⏮ ⏯ ⏭) -------------------------------------
 
-    def media_control(self, source, direction):
-        """app.media_cb: skip in the Spotify app on this Mac, if it's running (no Web API
+    def media_control(self, source, action):
+        """app.media_cb: previous / play-pause / next in the Spotify app on this Mac, if it's running (no Web API
         or Premium needed). False → the shared code uses the Web API. The Music app is
         handled by the shared code (mac_music runs osascript locally on the Mac)."""
         if source != "spotify":
             return False
-        cmd = "next track" if direction == "next" else "previous track"
+        cmd = {"next": "next track", "previous": "previous track", "playpause": "playpause"}[action]
         script = (f'if application "Spotify" is running then\n tell application "Spotify" to {cmd}\n'
                   f' return "ok"\nend if\nreturn ""\n')
         try:
