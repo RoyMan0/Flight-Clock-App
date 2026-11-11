@@ -888,21 +888,387 @@ FC.FIXTURES = [
   }
  },
  {
-  "label": "Snow report",
+  "label": "Snow report (open)",
   "plugin": "snow_report",
   "model": {
+   "units": "imperial",
+   "windows": [
+    "24",
+    "72"
+   ],
+   "mode": "cards",
    "index": 0,
-   "count": 2,
-   "report": {
-    "name": "Vail",
-    "base_depth": 38,
-    "new_snow_24h": 6,
-    "snow_unit": "\"",
-    "conditions": "Powder",
-    "open_trails": 142,
-    "total_trails": 195,
-    "error": null
-   }
+   "page": "lines",
+   "resorts": [
+    {
+     "id": "com/valais/zermatt",
+     "name": "Zermatt",
+     "open": true,
+     "opening_date": "2026-11-01",
+     "base_cm": null,
+     "summit_cm": 30.0,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 18.0
+     },
+     "runs_open": 4,
+     "runs_total": 147,
+     "runs_pct": 3.0,
+     "lifts_open": 5,
+     "lifts_total": 54,
+     "weather": {
+      "type": "SNOW_SHOWERS",
+      "high": -0.1,
+      "low": -1.6
+     },
+     "forecast": [
+      {
+       "date": "2026-11-10",
+       "high": 1.2,
+       "low": -0.5,
+       "snow": 0.0,
+       "type": "SNOW_SHOWERS"
+      },
+      {
+       "date": "2026-11-11",
+       "high": -0.1,
+       "low": -1.6,
+       "snow": 0.38,
+       "type": "SNOW"
+      },
+      {
+       "date": "2026-11-12",
+       "high": -0.1,
+       "low": -1.4,
+       "snow": 17.77,
+       "type": "HEAVY_SNOW"
+      },
+      {
+       "date": "2026-11-13",
+       "high": -2.0,
+       "low": -9.3,
+       "snow": 0.0,
+       "type": "MOSTLY_SUNNY"
+      }
+     ],
+     "error": null
+    },
+    {
+     "id": "com/colorado/vail",
+     "name": "Vail",
+     "open": false,
+     "opening_date": "2099-11-13",
+     "base_cm": 10.16,
+     "summit_cm": null,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 0.0
+     },
+     "runs_open": 0,
+     "runs_total": 277,
+     "runs_pct": 0.0,
+     "lifts_open": 0,
+     "lifts_total": 33,
+     "weather": {
+      "type": "MOSTLY_SUNNY",
+      "high": 3.8,
+      "low": -4.5
+     },
+     "forecast": [],
+     "error": null
+    }
+   ]
+  }
+ },
+ {
+  "label": "Snow report (closed)",
+  "plugin": "snow_report",
+  "model": {
+   "units": "imperial",
+   "windows": [
+    "24",
+    "72"
+   ],
+   "mode": "cards",
+   "index": 1,
+   "page": "lines",
+   "resorts": [
+    {
+     "id": "com/valais/zermatt",
+     "name": "Zermatt",
+     "open": true,
+     "opening_date": "2026-11-01",
+     "base_cm": null,
+     "summit_cm": 30.0,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 18.0
+     },
+     "runs_open": 4,
+     "runs_total": 147,
+     "runs_pct": 3.0,
+     "lifts_open": 5,
+     "lifts_total": 54,
+     "weather": {
+      "type": "SNOW_SHOWERS",
+      "high": -0.1,
+      "low": -1.6
+     },
+     "forecast": [
+      {
+       "date": "2026-11-10",
+       "high": 1.2,
+       "low": -0.5,
+       "snow": 0.0,
+       "type": "SNOW_SHOWERS"
+      },
+      {
+       "date": "2026-11-11",
+       "high": -0.1,
+       "low": -1.6,
+       "snow": 0.38,
+       "type": "SNOW"
+      },
+      {
+       "date": "2026-11-12",
+       "high": -0.1,
+       "low": -1.4,
+       "snow": 17.77,
+       "type": "HEAVY_SNOW"
+      },
+      {
+       "date": "2026-11-13",
+       "high": -2.0,
+       "low": -9.3,
+       "snow": 0.0,
+       "type": "MOSTLY_SUNNY"
+      }
+     ],
+     "error": null
+    },
+    {
+     "id": "com/colorado/vail",
+     "name": "Vail",
+     "open": false,
+     "opening_date": "2099-11-13",
+     "base_cm": 10.16,
+     "summit_cm": null,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 0.0
+     },
+     "runs_open": 0,
+     "runs_total": 277,
+     "runs_pct": 0.0,
+     "lifts_open": 0,
+     "lifts_total": 33,
+     "weather": {
+      "type": "MOSTLY_SUNNY",
+      "high": 3.8,
+      "low": -4.5
+     },
+     "forecast": [],
+     "error": null
+    }
+   ]
+  }
+ },
+ {
+  "label": "Snow report (forecast)",
+  "plugin": "snow_report",
+  "model": {
+   "units": "metric",
+   "windows": [
+    "24",
+    "72"
+   ],
+   "mode": "cards",
+   "index": 0,
+   "page": "forecast",
+   "resorts": [
+    {
+     "id": "com/valais/zermatt",
+     "name": "Zermatt",
+     "open": true,
+     "opening_date": "2026-11-01",
+     "base_cm": null,
+     "summit_cm": 30.0,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 18.0
+     },
+     "runs_open": 4,
+     "runs_total": 147,
+     "runs_pct": 3.0,
+     "lifts_open": 5,
+     "lifts_total": 54,
+     "weather": {
+      "type": "SNOW_SHOWERS",
+      "high": -0.1,
+      "low": -1.6
+     },
+     "forecast": [
+      {
+       "date": "2026-11-10",
+       "high": 1.2,
+       "low": -0.5,
+       "snow": 0.0,
+       "type": "SNOW_SHOWERS"
+      },
+      {
+       "date": "2026-11-11",
+       "high": -0.1,
+       "low": -1.6,
+       "snow": 0.38,
+       "type": "SNOW"
+      },
+      {
+       "date": "2026-11-12",
+       "high": -0.1,
+       "low": -1.4,
+       "snow": 17.77,
+       "type": "HEAVY_SNOW"
+      },
+      {
+       "date": "2026-11-13",
+       "high": -2.0,
+       "low": -9.3,
+       "snow": 0.0,
+       "type": "MOSTLY_SUNNY"
+      }
+     ],
+     "error": null
+    },
+    {
+     "id": "com/colorado/vail",
+     "name": "Vail",
+     "open": false,
+     "opening_date": "2099-11-13",
+     "base_cm": 10.16,
+     "summit_cm": null,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 0.0
+     },
+     "runs_open": 0,
+     "runs_total": 277,
+     "runs_pct": 0.0,
+     "lifts_open": 0,
+     "lifts_total": 33,
+     "weather": {
+      "type": "MOSTLY_SUNNY",
+      "high": 3.8,
+      "low": -4.5
+     },
+     "forecast": [],
+     "error": null
+    }
+   ]
+  }
+ },
+ {
+  "label": "Snow report (rows)",
+  "plugin": "snow_report",
+  "model": {
+   "units": "imperial",
+   "windows": [
+    "24",
+    "72"
+   ],
+   "mode": "rows",
+   "resorts": [
+    {
+     "id": "com/valais/zermatt",
+     "name": "Zermatt",
+     "open": true,
+     "opening_date": "2026-11-01",
+     "base_cm": null,
+     "summit_cm": 30.0,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 18.0
+     },
+     "runs_open": 4,
+     "runs_total": 147,
+     "runs_pct": 3.0,
+     "lifts_open": 5,
+     "lifts_total": 54,
+     "weather": {
+      "type": "SNOW_SHOWERS",
+      "high": -0.1,
+      "low": -1.6
+     },
+     "forecast": [
+      {
+       "date": "2026-11-10",
+       "high": 1.2,
+       "low": -0.5,
+       "snow": 0.0,
+       "type": "SNOW_SHOWERS"
+      },
+      {
+       "date": "2026-11-11",
+       "high": -0.1,
+       "low": -1.6,
+       "snow": 0.38,
+       "type": "SNOW"
+      },
+      {
+       "date": "2026-11-12",
+       "high": -0.1,
+       "low": -1.4,
+       "snow": 17.77,
+       "type": "HEAVY_SNOW"
+      },
+      {
+       "date": "2026-11-13",
+       "high": -2.0,
+       "low": -9.3,
+       "snow": 0.0,
+       "type": "MOSTLY_SUNNY"
+      }
+     ],
+     "error": null
+    },
+    {
+     "id": "com/colorado/vail",
+     "name": "Vail",
+     "open": false,
+     "opening_date": "2099-11-13",
+     "base_cm": 10.16,
+     "summit_cm": null,
+     "new_cm": {
+      "24": 0.0,
+      "48": 0.0,
+      "72": 0.0
+     },
+     "runs_open": 0,
+     "runs_total": 277,
+     "runs_pct": 0.0,
+     "lifts_open": 0,
+     "lifts_total": 33,
+     "weather": {
+      "type": "MOSTLY_SUNNY",
+      "high": 3.8,
+      "low": -4.5
+     },
+     "forecast": [],
+     "error": null
+    },
+    {
+     "id": "com/x/y",
+     "name": "Mt Nowhere",
+     "open": false,
+     "error": "Resort page not found on OnTheSnow"
+    }
+   ]
   }
  },
  {

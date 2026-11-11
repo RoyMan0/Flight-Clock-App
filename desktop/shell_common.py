@@ -26,7 +26,7 @@ PLUGIN_NAMES = {
     "now_playing": "Now Playing", "system_stats": "System Stats", "ai_usage": "AI Usage",
     "calendar": "Calendar", "maze": "Maze",
 }
-HIDDEN_PLUGINS = {"snow_report"}            # hidden everywhere until it's fixed (see the Pi CLAUDE.md)
+HIDDEN_PLUGINS = set()                      # modules left out of the Show Module menu
 
 
 def plugin_name(pid):

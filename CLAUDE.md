@@ -32,6 +32,7 @@ desktop/
     js/screens/        led.js (64×32 LEDs), flipboard.js (split flaps), eink.js (colour e-ink canvas)
     js/board.js        the Board model (24×8 grid of cells) + helpers; js/layouts/<plugin>.js → Board
     js/art.js          weather icons, world map / radar / ISS / pixel painters; js/world.js land outline
+    js/viz.js          Now Playing visualizers (Winamp/iTunes style): analyser port + 7 canvas presets
     js/fixtures.js     sample describe() models for the gallery and tests
     gallery.html       /desktop/gallery: every module × screen, every case × colour; "Use this style"
     tests/run.sh       layout tests under JavaScriptCore (no Node)
@@ -127,6 +128,7 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
   - **End animations on timers, never on `onfinish`/`animationend`.** WebKit pauses animations in hidden or covered windows (including offscreen snapshots), but timers keep running.
   - Cases are pure CSS in `cases.css`, keyed by `body[data-case][data-color]`, with no Apple logos or names drawn. Each case's window size and ratio live in `settings.CASES`; `Shell._apply_case_size` reshapes the window around its top-left and locks the ratio. The screen inside (`#well`) stays 2:1, so update the `#well` percentages if you change a case's size.
   - Adding a case colour: add it to `settings.CASES` **and** to `cases.css`. Adding a plugin layout: `js/layouts/<id>.js`, a `<script>` tag in `index.html`, a fixture in `js/fixtures.js`, then `desktop/panel/tests/run.sh`.
+- **Visualizers.** Now Playing styles `viz_<preset>` (vortex, spectrum, reflection, rays, kaleido, plasma, spiral, or cycle; desktop-only options in the Now Playing card) draw `js/viz.js` on `#viz` over any screen. It runs a JS port of `eq.py`'s Analyzer at full frame rate from `describe()`'s `features`, `position` and `seed`; the model only says which song, where, and paused. Presets draw a scene (`v.ctx`, reused by `feedback()`: zoom/rotate/fade of the last frame, the MilkDrop trick) plus an optional crisp `overlay`. Offscreen snapshots don't run requestAnimationFrame: `window.__viz.step(n)` renders n frames; `/desktop/panel?fixture=N&viz=<preset>` previews one, and the gallery has a Visualizers tab. The LED frame (and the Pi) show `eq` meanwhile.
 - **Now Playing ⏮ ⏯ ⏭.** `#np-controls` in `panel/index.html` is a bar at the bottom of the screen that fades in on hover while the active module is `now_playing` with `can_skip` (core.js also polls the model once a second on the LED screen for this); `body.np-paused` swaps the play/pause icon. Clicks go to `POST /api/now_playing/control`. The buttons stop `mousedown`/`dblclick`, so they don't drag the window (Windows easy_drag) or toggle full screen. `Shell.media_control` (set as `app.media_cb`) controls a Spotify app on the same computer first: AppleScript on the Mac, media keys on Windows.
 - **Web server.** It binds to `127.0.0.1` on 8080, or a free port if 8080 is taken. With `lan_access` it binds to `0.0.0.0`; that's off by default, so there's no firewall prompt.
 

@@ -27,7 +27,7 @@
 <body>
 <header>
   <h1>✈ Styles</h1>
-  <div class="tabs"><button data-tab="modules" class="on">Every module</button> <button data-tab="cases">Every case</button></div>
+  <div class="tabs"><button data-tab="modules" class="on">Every module</button> <button data-tab="cases">Every case</button> <button data-tab="viz">Visualizers</button></div>
   <label>Screen <select id="screen"></select></label>
   <label>Case <select id="case"></select></label>
   <label>Colour <select id="color"></select></label>
@@ -36,6 +36,7 @@
 </header>
 <main id="grid"></main>
 <script src="/desktop/panel/js/fixtures.js"></script>
+<script src="/desktop/panel/js/viz.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   let catalog = null, tab = 'modules';
@@ -71,6 +72,11 @@
       const size = caseOf(kase).size;
       grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '340px' : '260px');
       FC.FIXTURES.forEach((f, i) => grid.appendChild(card(f.label, f.plugin, url(i, screen, kase, color), size)));
+    } else if (tab === 'viz') {                      // Now Playing's visualizers (style "viz_<id>")
+      const size = caseOf(kase).size, np = FC.FIXTURES.findIndex((f) => f.plugin === 'now_playing');
+      grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '420px' : '300px');
+      for (const [id, p] of Object.entries(FC.VIZ_PRESETS))
+        grid.appendChild(card(p.name, 'Settings → Now Playing → Style', url(np, screen, kase, color) + '&viz=' + id, size));
     } else {
       grid.style.setProperty('--w', '280px');
       for (const c of catalog.cases) {

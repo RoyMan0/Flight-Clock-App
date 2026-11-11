@@ -20,6 +20,7 @@
     flipboard: new FC.FlipScreen(screenEl),
     eink: new FC.EinkScreen(screenEl),
   };
+  const viz = window.__viz = new FC.Viz(screenEl);   // Now Playing's "viz_*" styles, over any screen
 
   let prefs = { screen: 'led', case: 'none', case_color: '', led_style: 'round', bezel: true, glow: true, flip_sound: false };
   let state = null;          // {plugin, model} from /api/display/model (or a fixture)
@@ -106,6 +107,7 @@
   function npControls() {
     const on = !preview && !!state && state.plugin === 'now_playing' && !!(state.model && state.model.can_skip);
     body.classList.toggle('np-skip', on);
+    viz.setModel(state && state.plugin === 'now_playing' ? state.model : null);
     body.classList.toggle('np-paused', on && !!state.model.paused);
     document.querySelector('.np-main').title = on && state.model.paused ? 'Play' : 'Pause';
   }
@@ -186,12 +188,15 @@
   if (preview) {
     const fx = FC.FIXTURES[Number(params.get('fixture'))] || FC.FIXTURES[0];
     state = { plugin: fx.plugin, model: fx.model };
+    if (params.get('viz') && fx.plugin === 'now_playing')       // ?viz=<preset>: preview a visualizer
+      state.model = { ...fx.model, style: 'viz_' + params.get('viz'), position: 42, seed: 7 };
     window.applyPrefs({
       screen: params.get('screen') || 'flipboard', case: params.get('case') || 'none',
       case_color: params.get('color') || '', led_style: params.get('led_style') || 'round',
       bezel: params.get('bezel') !== '0', glow: true,
     });
     gotFrame(demoFrame(), 100);
+    npControls();                 // feeds the visualizer in ?viz= previews
   } else {
     fetch('/api/desktop/settings').then((r) => r.json()).then(window.applyPrefs).catch(() => window.applyPrefs({}));
     pollFrame();

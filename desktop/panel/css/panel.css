@@ -12,6 +12,21 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 #offline { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
            color: #555; font: 600 12px -apple-system, sans-serif; letter-spacing: .08em; z-index: 5; }
 
+/* ---- Now Playing visualizers (js/viz.js) -------------------------------------- */
+#viz { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; display: none; background: #000; }
+body.viz-on #viz { display: block; }
+body.viz-on.viz-paused #viz { filter: brightness(.45) saturate(.6); transition: filter .4s; }
+#viz-info { position: absolute; left: 4%; top: 5%; max-width: 80%; z-index: 4; display: none; opacity: 0;
+            transition: opacity .5s; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            font: 600 clamp(9px, 2.6vmin, 15px) Menlo, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase;
+            color: #63ff6b; text-shadow: 0 0 6px rgba(80, 255, 90, .6), 0 1px 2px #000; }
+body.viz-on #viz-info { display: block; }
+body.viz-on #viz-info.on, body.viz-on #case:hover #viz-info { opacity: 1; }
+#viz-paused { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; display: none;
+              gap: 1.2vmin; height: 16%; aspect-ratio: 1; align-items: center; justify-content: center; pointer-events: none; }
+#viz-paused span { width: 26%; height: 100%; border-radius: 3px; background: rgba(255, 255, 255, .85); }
+body.viz-on.viz-paused #viz-paused { display: flex; }
+
 /* ---- Now Playing ⏮ ⏯ ⏭ (shown on hover while the module is up) ------------- */
 #np-controls { position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
                transition: opacity .25s; }
