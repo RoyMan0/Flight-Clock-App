@@ -21,14 +21,21 @@ body[data-case="bedside"][data-color="teak"] { --wood: #8a5530; --grain: #5e351a
 body[data-case="bedside"][data-color="oak"] { --wood: #b88a55; --grain: #8e6534; --hi: rgba(255,245,220,.2); }
 body[data-case="bedside"][data-color="black"] { --wood: #2a2522; --grain: #171311; --hi: rgba(255,255,255,.07); }
 
+/* Vinyl wood-look laminate: long, gently wavy horizontal grain (noise stretched sideways),
+   fine pores, and a glossy plastic sheen. The streaks are translucent dark, so each colour
+   (--wood) keeps its own tone. */
+body[data-case="bedside"] {
+  --grain-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='400' preserveAspectRatio='none'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0022 0.075' numOctaves='4' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.09  0 0 0 0 0.05  0 0 0 0 0.02  2.1 0 0 0 -0.85'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --pores-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300' preserveAspectRatio='none'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.6' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1.8 0 -1.0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
 body[data-case="bedside"] .c-body {
   display: block; left: 1.5%; right: 1.5%; top: 13%; bottom: 3%; border-radius: 2.2% / 5%;
   background:
     linear-gradient(var(--hi), transparent 12%, transparent 85%, rgba(0,0,0,.35)),
-    repeating-linear-gradient(91deg, transparent 0 7px, rgba(0,0,0,.08) 7px 9px, transparent 9px 17px),
-    repeating-linear-gradient(88.5deg, transparent 0 23px, var(--grain) 23px 25px, transparent 25px 41px),
-    radial-gradient(ellipse 18% 9% at 74% 60%, var(--grain), transparent 70%),
-    radial-gradient(ellipse 25% 6% at 30% 30%, rgba(0,0,0,.18), transparent 70%),
+    linear-gradient(105deg, transparent 30%, rgba(255,255,255,.07) 42%, rgba(255,255,255,.02) 50%, transparent 58%),
+    var(--pores-svg) 0 0 / 100% 100% no-repeat,
+    var(--grain-svg) 0 0 / 100% 100% no-repeat,
+    linear-gradient(180deg, rgba(0,0,0,.06), transparent 30%, rgba(0,0,0,.05) 60%, transparent),
     var(--wood);
   box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.35);
 }
