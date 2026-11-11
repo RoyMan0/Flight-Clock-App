@@ -328,9 +328,13 @@ window.FC = window.FC || {};
           if (paint) paint(ctx, w, h, c.data || {}, { ...theme, frame: this.frame });
         });
         t.repaint = () => render(t.face);
-        // The map and radar fold over when their data change; raw pixels redraw live
-        const sig = c.paint === 'pixels' ? 'pixels:' + (this.board && this.board.key) + JSON.stringify(c.data)
-          : `${c.paint}:${JSON.stringify(c.data)}`;
+        // The radar folds over when its data change; raw pixels redraw live. The world map
+        // only folds when it appears: the sun and moon creep every poll, so it redraws in place
+        const data = JSON.stringify(c.data);
+        const sig = c.paint === 'pixels' ? 'pixels:' + (this.board && this.board.key) + data
+          : c.paint === 'world' ? 'world' : `${c.paint}:${data}`;
+        if (c.paint === 'world' && t.sig === sig && t.data !== data) render(t.face);
+        t.data = data;
         t.show(sig, render, delay, c.paint === 'pixels');
       }
     }
