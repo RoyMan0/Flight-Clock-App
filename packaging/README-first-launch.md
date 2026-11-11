@@ -34,7 +34,7 @@ Click **Save & Start** and the display appears.
 
 ## Using it
 
-- The **✈ icon in the menu bar** shows or hides the panel, opens Settings, picks a module to show, changes the style, or quits.
+- The **✈ icon in the menu bar** opens the menu: show or hide the panel, open Settings, pick a module to show, change the style, or quit.
 - **Style** lets you choose the screen (LED panel, airport flip board, or colour e-ink) and the case around it (80s bedside clock, mid-century desk clock, vintage Mac SE or iMac G3 style, each in several colours). Settings → Mac App → *Browse all styles* shows every one.
 - **Right-click the panel** for the same menu. **Double-click** it for full screen.
 - **Settings → Config → Mac App** has these options:
