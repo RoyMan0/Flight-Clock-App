@@ -12,7 +12,7 @@ It can also look like things the LED panel can't:
 - **Cases:** an **80s bedside clock** in faux wood, a **mid-century desk clock**, a **vintage Mac SE** or an **iMac G3** in all its candy colours. Any screen in any case.
 - **Music visualizers** for Now Playing, in the style of Winamp and the old iTunes visualizer, with ⏮ ⏯ ⏭ buttons on the clock for Spotify and Apple Music.
 
-> **Want the real thing?** Build the LED version on a Raspberry Pi: parts list and one-command install at **[Flight Clock for Raspberry Pi](https://github.com/RoyMan0/flight-clock-and-more)**.
+> **Want the real thing?** Build the LED version on a Raspberry Pi: parts list and one-command install at **[Flight Clock for Raspberry Pi](https://github.com/RoyMan0/flight-clock-and-more)**. Or have me build one for you ($230–250): [rdhobbs@gmail.com](mailto:rdhobbs@gmail.com?subject=Flight%20Clock%20build).
 
 ---
 
