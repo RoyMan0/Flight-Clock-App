@@ -1299,4 +1299,17 @@ FC.FIXTURES = [
   "model": null
  }
 ];
+// The clock with the forecast by time of day (clock_weather forecast_mode "periods")
+(() => {
+  const base = FC.FIXTURES.find((f) => f.label === 'Clock & weather');
+  if (!base) return;
+  const model = JSON.parse(JSON.stringify(base.model));
+  model.forecast_kind = 'periods';
+  model.forecast = [
+    { day: 'Aft', code: 1100, max: 61, min: 55, night: false },
+    { day: 'Eve', code: 4000, max: 54, min: 48, night: false },
+    { day: 'Nite', code: 1000, max: 47, min: 41, night: true },
+  ];
+  FC.FIXTURES.splice(FC.FIXTURES.indexOf(base) + 1, 0, { label: 'Clock (forecast by time of day)', plugin: 'clock_weather', model });
+})();
 for (const f of FC.FIXTURES) if (f.model && f.model.event_ts_offset != null) f.model.event_ts = Date.now() / 1000 + f.model.event_ts_offset;

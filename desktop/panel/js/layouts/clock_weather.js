@@ -1,4 +1,4 @@
-// Clock & weather: date + temp, big time, today's icon, alert line, 3-day forecast
+// Clock & weather: date + temp, big time, today's icon, alert line, 3-day (or day-part) forecast
 (function (FC) {
   const { B } = FC;
   const DAY = [255, 150, 40], NIGHT = [90, 150, 255];
@@ -24,8 +24,9 @@
 
     (m.forecast || []).slice(0, 3).forEach((d, i) => {
       const x = i * 8;
-      cells.push(B.text(x, 5, 4, B.fit(d.day, 3), { color: [200, 200, 200] }));
-      cells.push(B.icon(x + 4, 5, 3, 2, { kind: 'weather', code: d.code }));
+      // d.day: a weekday ("Sat"), or a part of the day ("Morn", "Nite") with forecast_mode periods
+      cells.push(B.text(x, 5, 4, B.fit(d.day, 4), { color: [200, 200, 200] }));
+      cells.push(B.icon(x + 4, 5, 3, 2, { kind: 'weather', code: d.code, night: !!d.night }));
       cells.push(B.text(x, 6, 4, B.fit(`${d.max}°`, 4), { color: [255, 190, 110] }));
       cells.push(B.text(x, 7, 4, B.fit(`${d.min}°`, 4), { color: [140, 180, 255] }));
     });

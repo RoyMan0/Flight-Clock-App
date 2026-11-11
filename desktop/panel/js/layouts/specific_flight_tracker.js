@@ -20,7 +20,8 @@
     if (m.details && f.ground_speed) bits.push(`${f.ground_speed}kt`);
     cells.push(B.text(0, 6, 24, B.fit(bits.filter(Boolean).join('  '), 24), { color: [170, 210, 255] }));
     const near = m.poi || m.city, nw = m.count > 1 ? 20 : 24;
-    if (near) cells.push(B.text(0, 7, nw, B.fit(`near ${near}`, nw), { color: [190, 160, 255] }));
+    const place = near ? `near ${near}` : m.region ? `over ${m.region}` : '';   // region: sea/ocean or country
+    if (place) cells.push(B.text(0, 7, nw, B.fit(place, nw), { color: [190, 160, 255] }));
     if (m.count > 1) cells.push(B.text(21, 7, 3, B.pad(`${m.index + 1}/${m.count}`, 3, 'right'), { color: B.DIM }));
     return { key: f.callsign || m.index, cells };
   };
