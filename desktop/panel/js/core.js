@@ -212,7 +212,18 @@
       case_color: params.get('color') || '', led_style: params.get('led_style') || 'round',
       bezel: params.get('bezel') !== '0', glow: true,
     });
-    gotFrame(demoFrame(), 100);
+    if ((params.get('screen') || 'flipboard') === 'led' && !params.get('viz') && params.get('sample') !== '0') {
+      // The LED screen: this module's real picture from its current data (the app draws it
+      // off-screen); sample data can't go through the Pi's renderers
+      fetch(`/api/display/sample/${fx.plugin}`, { cache: 'no-store' }).then(async (r) => {
+        if (r.status === 200) { gotFrame(new Uint8Array(await r.arrayBuffer()), 100); return; }
+        gotFrame(new Uint8Array(64 * 32 * 3), 100);
+        offline.textContent = 'NOTHING TO SHOW YET';
+        offline.style.display = 'flex';
+      }).catch(() => gotFrame(demoFrame(), 100));
+    } else {
+      gotFrame(demoFrame(), 100);
+    }
     npControls();                 // feeds the visualizer in ?viz= previews
   } else {
     fetch('/api/desktop/settings').then((r) => r.json()).then(window.applyPrefs).catch(() => window.applyPrefs({}));

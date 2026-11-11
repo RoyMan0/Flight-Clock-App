@@ -233,14 +233,19 @@ window.FC = window.FC || {};
       name: 'Warp Rays',
       frame(v, a) {
         const { ctx, W, H } = v;
-        feedback(v, { zoom: 1.018 + a.bassS * 0.012, alpha: 0.9, fade: 'rgba(0,0,0,1)' });
-        const cx = W / 2, cy = H / 2;
+        // A slow surge (a few tens of seconds, louder = bigger): from short streaks around the
+        // centre up to a full-screen warp, with the zoom speeding up to match
+        const surge = (0.5 + 0.5 * Math.sin(v.ph * 0.22)) * (0.4 + 0.9 * a.levelS);
+        feedback(v, { zoom: 1.016 + a.bassS * 0.01 + surge * 0.025, alpha: 0.9, fade: 'rgba(0,0,0,1)' });
+        const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2;
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        const count = 3 + Math.round(a.levelS * 8 + a.kickS * 4);
+        const count = 3 + Math.round(a.levelS * 6 + a.kickS * 4 + surge * 10);
+        const hue0 = 140 + Math.sin(v.ph * 0.1) * 70;               // green ↔ cyan ↔ violet over time
         for (let i = 0; i < count; i++) {
-          const ang = v.rand() * TAU, r0 = 4 + v.rand() * 20, r1 = r0 + 12 + v.rand() * (24 + a.treble * 60);
-          ctx.strokeStyle = hsl(140 + v.rand() * 60 + Math.sin(v.ph * 0.2) * 30, 70, 35 + v.rand() * 30, 0.5);
+          const ang = v.rand() * TAU, r0 = 4 + v.rand() * (12 + surge * R * 0.3);
+          const r1 = r0 + R * (0.06 + v.rand() * (0.12 + 0.75 * surge + 0.25 * a.kickS));
+          ctx.strokeStyle = hsl(hue0 + v.rand() * 60, 70, 35 + v.rand() * 30, 0.5);
           ctx.lineWidth = 1 + v.rand() * 3;
           ctx.beginPath();
           ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0 * 0.6);
@@ -268,21 +273,26 @@ window.FC = window.FC || {};
       name: 'Kaleidoscope',
       frame(v, a) {
         const { ctx, W, H } = v;
-        feedback(v, { zoom: 1.018, rot: -0.004, alpha: 0.82, fade: 'rgba(0,0,0,1)' });
-        const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.95, w = a.wave, n = w.length;
+        // Breathes: the arms reach from a small star out past the edges and back, and the
+        // symmetry changes every so often (6, 8, 10 or 12 arms)
+        const breath = 0.5 + 0.5 * Math.sin(v.ph * 0.35);
+        feedback(v, { zoom: 1.012 + 0.018 * a.levelS, rot: -0.004, alpha: 0.82, fade: 'rgba(0,0,0,1)' });
+        const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2, w = a.wave, n = w.length;
         const cols = [hsl(330, 90, 60), hsl(0, 0, 95), hsl(55, 90, 65), hsl(200, 80, 60)];
+        const arms = [8, 6, 10, 12][Math.floor(v.ph / 16) % 4];
+        const reach = R * (0.3 + 0.75 * breath + 0.2 * a.levelS);
         ctx.save();
         ctx.translate(cx, cy);
         ctx.lineWidth = 1.6 + a.bass * 2;
-        for (let arm = 0; arm < 8; arm++) {
+        for (let arm = 0; arm < arms; arm++) {
           ctx.save();
-          ctx.rotate(arm * TAU / 8 + v.ph * 0.12);
+          ctx.rotate(arm * TAU / arms + v.ph * 0.12);
           if (arm % 2) ctx.scale(1, -1);
           ctx.strokeStyle = cols[(arm + Math.floor(v.ph / 4)) % cols.length];
           ctx.beginPath();
           for (let i = 0; i < n; i++) {
-            const r = 0.06 * R + (i / (n - 1)) * R * 0.5;
-            const off = w[i] * R * 0.07 * (0.5 + a.level);
+            const r = 0.04 * R + (i / (n - 1)) * reach;
+            const off = w[i] * R * (0.05 + 0.08 * breath) * (0.5 + a.level);
             i ? ctx.lineTo(r, off) : ctx.moveTo(r, off);
           }
           ctx.stroke();

@@ -18,7 +18,7 @@ body.viz-on #viz { display: block; }
 body.viz-on.viz-paused #viz { filter: brightness(.45) saturate(.6); transition: filter .4s; }
 #viz-info { position: absolute; left: 4%; top: 5%; max-width: 80%; z-index: 4; display: none; opacity: 0;
             transition: opacity .5s; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            font: 600 clamp(9px, 2.6vmin, 15px) Menlo, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase;
+            font: 600 clamp(10px, 3.2vmin, 18px) Menlo, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase;
             color: #63ff6b; text-shadow: 0 0 6px rgba(80, 255, 90, .6), 0 1px 2px #000; }
 body.viz-on #viz-info { display: block; }
 body.viz-on #viz-info.on, body.viz-on #case:hover #viz-info { opacity: 1; }
@@ -37,10 +37,16 @@ body.viz-paused #viz-progress span { background: #ebA01e; }
 body.viz-strip #viz-info { top: auto; bottom: 8.5%; left: 4%; max-width: 92%; }
 body.viz-strip[data-screen="flipboard"] #viz-info { color: #f2f0e8; text-shadow: none; font-family: "DIN Condensed", "Arial Narrow", sans-serif;
                                                     font-weight: 700; font-size: clamp(10px, 4.6vmin, 30px); letter-spacing: .08em; }
-body.viz-on[data-screen="eink"] #viz-info { color: #22221f; text-shadow: none; text-transform: none; letter-spacing: 0;
-                                           font: 600 clamp(10px, 4.4vmin, 28px) Charter, Georgia, serif; }
-body.viz-on[data-screen="eink"] #viz-progress { background: rgba(34, 34, 31, .15); }
-body.viz-on[data-screen="eink"] #viz-progress span { background: #22221f; transition: none; }
+/* Visualizers (dark pictures on any screen): bright text on a soft dark backing, so the song
+   reads over the brightest frames */
+body.viz-on:not(.viz-strip) #viz-info { padding: .25em .6em; border-radius: 6px; background: rgba(0, 0, 0, .55);
+                                        color: #8dff92; text-shadow: 0 1px 2px #000; }
+body.viz-on:not(.viz-strip) #viz-progress { background: rgba(0, 0, 0, .55); box-shadow: 0 0 0 2px rgba(0, 0, 0, .35); }
+/* E-ink strip (the EQ styles on paper): ink on paper */
+body.viz-strip[data-screen="eink"] #viz-info { color: #22221f; text-shadow: none; text-transform: none; letter-spacing: 0;
+                                               font: 600 clamp(10px, 4.4vmin, 28px) Charter, Georgia, serif; }
+body.viz-strip[data-screen="eink"] #viz-progress { background: rgba(34, 34, 31, .15); }
+body.viz-strip[data-screen="eink"] #viz-progress span { background: #22221f; transition: none; }
 body.viz-on[data-screen="eink"].viz-paused #viz { filter: none; }
 
 /* ---- Now Playing ⏮ ⏯ ⏭ (shown on hover while the module is up) ------------- */

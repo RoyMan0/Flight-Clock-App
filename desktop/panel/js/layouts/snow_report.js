@@ -34,7 +34,7 @@
   // label left, value right, in a column of width w
   const stat = (cells, x, y, w, label, value, color, labelColor = LABEL) => {
     cells.push(B.text(x, y, w - value.length - 1, B.fit(label, w - value.length - 1), { color: labelColor }));
-    cells.push(B.text(x + w - value.length, y, value.length, value, { color }));
+    cells.push(B.text(x + w - value.length, y, value.length, value, { color, align: 'right' }));
   };
 
   function header(cells, r, m) {

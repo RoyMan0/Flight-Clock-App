@@ -16,7 +16,7 @@
     const hms = [h, mi, s].map((v) => String(v).padStart(2, '0')).join(':');
     cells.push(B.bar(0, 2, 24, 1, { color: [150, 60, 220], thin: true }));
     cells.push(B.big(0, 3, 24, 3, B.pad(m.line1 === 'TODAY' ? 'TODAY' : m.line1, 8, 'center'), { color: [255, 200, 60] }));
-    cells.push(B.big(4, 6, 16, 2, hms, { color: [120, 220, 255] }));
+    cells.push(B.big(0, 6, 24, 2, B.pad(hms, 12, 'center'), { color: [120, 220, 255] }));
     return { key: 'count', cells };
   };
 })(window.FC);

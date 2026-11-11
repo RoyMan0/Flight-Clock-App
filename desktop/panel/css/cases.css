@@ -156,7 +156,7 @@ body[data-case="mac_se"] .c-body::before { content: ""; position: absolute; inse
 
 /* tapered recess around the tube; its padding box is the dark glass */
 body[data-case="mac_se"] .c-a {
-  display: block; left: 11%; right: 11%; top: 6%; height: 47%; box-sizing: border-box; border-radius: 9% / 8.5%;
+  display: block; left: 9.4%; right: 9.4%; top: 7.6%; height: 37.6%; box-sizing: border-box; border-radius: 9% / 11%;
   border-style: solid; border-width: 3.2vh 3.6vw 2.2vh;
   border-color: color-mix(in srgb, var(--se3) 85%, black) var(--se2) color-mix(in srgb, var(--se) 55%, white) var(--se2);
   background: radial-gradient(ellipse 85% 80% at 50% 45%, #3b3f3c, #1c1f1d 62%, #0c0d0d) padding-box;
@@ -169,7 +169,9 @@ body[data-case="mac_se"] .c-a::before { content: ""; position: absolute; inset: 
 /* the bulge of the glass */
 body[data-case="mac_se"] .c-a::after { content: ""; position: absolute; inset: 0; border-radius: 7% / 7%; pointer-events: none;
   background: radial-gradient(ellipse 70% 45% at 32% 18%, rgba(255,255,255,.10), transparent 70%); }
-body[data-case="mac_se"] #well { left: 21%; width: 58%; top: 18.6%; height: 22.8%; }
+/* the screen fills the glass, with a slim dark border (the window keeps the case's ratio,
+   so a 68% wide well is 2:1 at 26.71% of the height) */
+body[data-case="mac_se"] #well { left: 16%; width: 68%; top: 13.6%; height: 26.71%; }
 body[data-case="mac_se"] #screen { border-radius: 3.5% / 7%; }
 body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 3.5% / 7%; pointer-events: none; z-index: 6;
   background: repeating-linear-gradient(rgba(0,0,0,.14) 0 1px, transparent 1px 3px),
@@ -178,14 +180,14 @@ body[data-case="mac_se"] #well::after { content: ""; position: absolute; inset: 
 
 /* badge: an engraved name under the tube's left edge */
 body[data-case="mac_se"] .c-b {
-  display: flex; align-items: center; left: 12.5%; width: 30%; top: 70%; height: 4%;
+  display: flex; align-items: center; left: 12.5%; width: 30%; top: 62%; height: 4%;
   font: italic 500 2.2vh/1 "Apple Garamond", Garamond, "Hoefler Text", Georgia, serif; letter-spacing: .02em;
   color: color-mix(in srgb, var(--se3) 80%, black); text-shadow: 0 1px 0 rgba(255,255,255,.6);
 }
 body[data-case="mac_se"] .c-b::after { content: "Flight Clock"; }
 /* floppy drive: a chamfered bezel, the slot, the eject pin-hole */
 body[data-case="mac_se"] .c-c {
-  display: block; left: 50%; right: 12%; top: 69.5%; height: 5.2%; box-sizing: border-box; border-radius: .6vh;
+  display: block; left: 50%; right: 12%; top: 61.5%; height: 5.2%; box-sizing: border-box; border-radius: .6vh;
   border-style: solid; border-width: 1vh 1.2vw .7vh;
   border-color: var(--se3) var(--se2) color-mix(in srgb, var(--se) 50%, white) var(--se2);
   background: linear-gradient(#141412, #2c2b28) padding-box;
@@ -195,7 +197,7 @@ body[data-case="mac_se"] .c-c::after { content: ""; position: absolute; right: -
   border-radius: 50%; background: #3a3833; box-shadow: 0 1px 0 rgba(255,255,255,.55); }
 /* power/drive lamp, left of the slot */
 body[data-case="mac_se"] .c-d {
-  display: block; left: 45%; top: 71.7%; width: 1.4vw; height: .7vh; border-radius: 1px;
+  display: block; left: 45%; top: 63.7%; width: 1.4vw; height: .7vh; border-radius: 1px;
   background: #4e5b3a; box-shadow: inset 0 1px 1px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.5);
 }
 /* the foot: the bottom band steps back, with a shadowed groove above it */
@@ -268,7 +270,7 @@ body[data-case="imac_g3"][data-color="dalmatian"] .c-body {
 
 /* the frosted ice face around the tube */
 body[data-case="imac_g3"] .c-a {
-  display: block; left: 8.5%; right: 8.5%; top: 5%; height: 64%; border-radius: 13% 13% 15% 15% / 14% 14% 17% 17%;
+  display: block; left: 7%; right: 7%; top: 4.5%; height: 57%; border-radius: 13% 13% 15% 15% / 15% 15% 18% 18%;
   background:
     linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,0) 16%),
     radial-gradient(ellipse 60% 30% at 50% 100%, rgba(255,255,255,.35), transparent 70%),
@@ -279,7 +281,7 @@ body[data-case="imac_g3"] .c-a {
 }
 /* the grey tube bezel, sloping in to the glass */
 body[data-case="imac_g3"] .c-b {
-  display: block; left: 12.5%; right: 12.5%; top: 9%; height: 54.5%; box-sizing: border-box; border-radius: 8% / 9.5%;
+  display: block; left: 10.6%; right: 10.6%; top: 8.6%; height: 44.8%; box-sizing: border-box; border-radius: 7% / 10%;
   border-style: solid; border-width: 2.2vh 2.4vw 2.6vh;
   border-color: #9aa3aa #b4bcc2 #d3d9dd #b4bcc2;
   background: radial-gradient(ellipse 85% 80% at 50% 45%, #2e3236, #15171a 65%, #0a0b0c) padding-box;
@@ -287,14 +289,14 @@ body[data-case="imac_g3"] .c-b {
 }
 body[data-case="imac_g3"] .c-b::after { content: ""; position: absolute; inset: 0; border-radius: 6% / 8%; pointer-events: none;
   background: radial-gradient(ellipse 65% 40% at 30% 16%, rgba(255,255,255,.12), transparent 70%); }
-body[data-case="imac_g3"] #well { left: 18.5%; width: 63%; top: 20.75%; height: 31.5%; }
+body[data-case="imac_g3"] #well { left: 14.5%; width: 71%; top: 13%; height: 35.5%; }
 body[data-case="imac_g3"] #screen { border-radius: 3% / 6%; }
 body[data-case="imac_g3"] #well::after { content: ""; position: absolute; inset: 0; border-radius: 3% / 6%; pointer-events: none; z-index: 6;
   background: radial-gradient(ellipse at 30% 15%, rgba(255,255,255,.14), transparent 55%); box-shadow: inset 0 0 16px rgba(0,0,0,.5); }
 
 /* speakers: frosted ice discs, like the face, with the grille's perforations */
 body[data-case="imac_g3"] .c-c, body[data-case="imac_g3"] .c-d {
-  display: block; top: 72%; width: 16%; height: 12.5%; border-radius: 50%;
+  display: block; top: 66%; width: 16%; height: 12.5%; border-radius: 50%;
   background:
     linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,0) 30%),
     radial-gradient(circle, rgba(70,80,90,.5) 30%, transparent 40%) 0 0 / .9vw .9vw,
@@ -307,7 +309,7 @@ body[data-case="imac_g3"] .c-c { left: 11%; }
 body[data-case="imac_g3"] .c-d { right: 11%; }
 /* slot-loading drive */
 body[data-case="imac_g3"] .c-e {
-  display: block; left: 36%; width: 28%; top: 75.5%; height: 1.3%; border-radius: 1vh;
+  display: block; left: 36%; width: 28%; top: 71%; height: 1.3%; border-radius: 1vh;
   background: linear-gradient(color-mix(in srgb, var(--g3d) 40%, black), color-mix(in srgb, var(--g3d) 75%, black));
   box-shadow: 0 0 0 .55vw rgba(var(--ice), .8), 0 0 0 calc(.55vw + 1px) rgba(255,255,255,.85),
               0 0 1vw calc(.55vw + 1px) color-mix(in srgb, var(--g3) 40%, transparent), 0 .4vh .8vh calc(.55vw + 1px) rgba(0,0,0,.15);

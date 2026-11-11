@@ -110,8 +110,11 @@ def _patch_webview(shell):
     """Native resize from the panel's corners and edges (with the case's ratio), and Copy /
     Paste in the right-click menu of the Settings window."""
     Host = BrowserView.WebKitHost
-    orig_down, orig_drag, orig_up = Host.mouseDown_, Host.mouseDragged_, Host.mouseUp_
-    state = {}                                    # the resize in progress
+    # Only mouseDown: is replaced (pywebview's own Python method, so the original is called
+    # directly). Never override mouseUp:/mouseDragged: here: replacing WKWebView's mouseUp:,
+    # even with a pass-through to super, stopped WebKit from seeing any click finish (nothing
+    # in the Settings window responded). A resize runs its own event loop instead.
+    orig_down = Host.mouseDown_
 
     def zone(win, event):
         if not shell.panel or win is not shell.panel.native:
@@ -131,23 +134,11 @@ def _patch_webview(shell):
             return (0, 1)
         return None
 
-    def mouseDown_(self, event):
-        win = self.window()
-        z = zone(win, event)
-        if z:
-            state.update(zone=z, start=AppKit.NSEvent.mouseLocation(), frame=win.frame(), win=win)
-            return                                # not a click on the page, and not a window drag
-        state.clear()
-        orig_down(self, event)
-
-    def mouseDragged_(self, event):
-        if not state:
-            return orig_drag(self, event)
-        win, f0, (sx, sy) = state["win"], state["frame"], state["zone"]
+    def resize_to(win, f0, start, sx, sy):
         now = AppKit.NSEvent.mouseLocation()
-        dx, dy = now.x - state["start"].x, now.y - state["start"].y
-        cw, ch = settings.CASES[shell.prefs["case"]]["size"]
-        ratio = cw / ch
+        dx, dy = now.x - start.x, now.y - start.y
+        case = settings.CASES[shell.prefs["case"]]
+        ratio = case["size"][0] / case["size"][1]
         w0, h0 = f0.size.width, f0.size.height
         by_x = w0 + sx * dx
         by_y = (h0 + sy * dy) * ratio
@@ -155,21 +146,28 @@ def _patch_webview(shell):
             nw = by_x if abs(by_x - w0) >= abs(by_y - w0) else by_y
         else:
             nw = by_x if sx else by_y
-        mw, _mh = settings.CASES[shell.prefs["case"]]["min"]
         screen = (win.screen() or AppKit.NSScreen.mainScreen()).visibleFrame()
-        nw = max(mw, min(nw, screen.size.width, screen.size.height * ratio))
+        nw = max(case["min"][0], min(nw, screen.size.width, screen.size.height * ratio))
         nh = nw / ratio
         x = f0.origin.x + w0 - nw if sx < 0 else f0.origin.x          # the opposite edge stays put
-        top = f0.origin.y + h0
-        y = f0.origin.y if sy > 0 else top - nh
+        y = f0.origin.y if sy > 0 else f0.origin.y + h0 - nh
         win.setFrame_display_(Foundation.NSMakeRect(x, y, nw, nh), True)
 
-    def mouseUp_(self, event):
-        if state:
-            state.clear()
-            shell._save_panel_frame_soon()
-            return
-        orig_up(self, event)
+    def mouseDown_(self, event):
+        win = self.window()
+        z = zone(win, event)
+        if not z:
+            return orig_down(self, event)
+        # A resize: track the mouse here until the button comes up (the usual Cocoa way), so
+        # neither the page nor pywebview's window drag sees this click
+        f0, start = win.frame(), AppKit.NSEvent.mouseLocation()
+        mask = AppKit.NSEventMaskLeftMouseDragged | AppKit.NSEventMaskLeftMouseUp
+        while True:
+            ev = win.nextEventMatchingMask_(mask)
+            if ev is None or ev.type() == AppKit.NSEventTypeLeftMouseUp:
+                break
+            resize_to(win, f0, start, *z)
+        shell._save_panel_frame_soon()
 
     def willOpenMenu_withEvent_(self, menu, event):
         # pywebview removes every item (no Reload / Inspect); keep the editing ones
@@ -180,10 +178,7 @@ def _patch_webview(shell):
         while menu.numberOfItems() and menu.itemAtIndex_(0).isSeparatorItem():
             menu.removeItemAtIndex_(0)
 
-    sig = b"v@:@"
-    Host.mouseDown_ = objc.selector(mouseDown_, selector=b"mouseDown:", signature=sig)
-    Host.mouseDragged_ = objc.selector(mouseDragged_, selector=b"mouseDragged:", signature=sig)
-    Host.mouseUp_ = objc.selector(mouseUp_, selector=b"mouseUp:", signature=sig)
+    Host.mouseDown_ = objc.selector(mouseDown_, selector=b"mouseDown:", signature=b"v@:@")
     Host.willOpenMenu_withEvent_ = objc.selector(willOpenMenu_withEvent_, selector=b"willOpenMenu:withEvent:",
                                                  signature=b"v@:@@")
 

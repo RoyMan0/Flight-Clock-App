@@ -32,13 +32,18 @@
   <label>Case <select id="case"></select></label>
   <label>Colour <select id="color"></select></label>
   <button class="primary" id="use">Use this style</button>
-  <span id="note">Sample data. Changes apply to the panel straight away.</span>
+  <span id="note">Sample data (the LED screen shows your modules' live data). "Use this style" applies it to the panel.</span>
 </header>
 <main id="grid"></main>
 <script src="/desktop/panel/js/fixtures.js"></script>
 <script src="/desktop/panel/js/viz.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
+  const PLUGIN_NAMES = {
+    clock_weather: 'Clock & Weather', flight_tracker: 'Overhead Flights', specific_flight_tracker: 'Specific Flights',
+    stock_ticker: 'Stock Ticker', snow_report: 'Snow Report', sports: 'Sports', world_daylight: 'World Daylight',
+    ap_news: 'Breaking News', event_countdown: 'Event Countdown', transit: 'Transit', world_clock: 'World Clock',
+    now_playing: 'Now Playing', system_stats: 'System Stats', ai_usage: 'AI Usage', calendar: 'Calendar', maze: 'Maze' };
   let catalog = null, tab = 'modules';
 
   function opts(sel, items, value) {
@@ -69,13 +74,15 @@
     grid.innerHTML = '';
     const screen = $('screen').value, kase = $('case').value, color = $('color').value;
     if (tab === 'modules' && screen === 'led') {
-      // The LED screen shows each module's real 64×32 pixels, drawn by the module itself from
-      // live data; the sample data here only feeds the flip-board and e-ink layouts
-      grid.style.setProperty('--w', '100%');
-      grid.innerHTML = `<div class="card"><div class="name">LED panel</div>
-        <p>The LED screen shows each module exactly as the Pi's panel draws it, from live data, so it
-        can't be previewed with sample data here. To see one: ✈ menu → Show Module, or the Display page.
-        Pick Flip board or Colour e-ink above to browse every module with sample data.</p></div>`;
+      // The LED screen: each module's real picture, drawn from the app's current data (one card
+      // per module; sample data only feeds the flip-board and e-ink layouts)
+      const size = caseOf(kase).size, seen = new Set();
+      grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '340px' : '260px');
+      FC.FIXTURES.forEach((f, i) => {
+        if (seen.has(f.plugin)) return;
+        seen.add(f.plugin);
+        grid.appendChild(card(PLUGIN_NAMES[f.plugin] || f.plugin, 'live data', url(i, screen, kase, color), size));
+      });
     } else if (tab === 'modules') {
       const size = caseOf(kase).size;
       grid.style.setProperty('--w', size[0] > size[1] * 1.6 ? '340px' : '260px');
