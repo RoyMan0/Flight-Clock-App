@@ -2,6 +2,8 @@
 
 The [Flight Clock](https://github.com/RoyMan0/flight-clock-and-more) on your computer: no Raspberry Pi or LED panel needed. It shows the planes flying over your house, the time and weather, and any of 16 modules (sports, stocks, your calendar, ski reports, Now Playing, and more) in a window, in the menu bar or tray, or on your desktop behind everything else.
 
+<img src="docs/app-flipboard.webp" alt="The app on a Mac desktop: the airport flip board in the 80s bedside clock case" width="100%">
+
 ![Flight Clock styles: flip board, e-ink, visualizer, and retro cases](docs/app-styles.png)
 
 It can also look like things the LED panel can't:
@@ -62,7 +64,9 @@ Click **Save & Start** and the clock appears.
 
 ## Help, ideas and tips
 
-Stuck, or have an idea? Open an [issue](https://github.com/RoyMan0/flight-clock-and-more/issues), or use **Issues? Ideas? Contact me!** at the bottom of the app's Settings page; it comes straight to me.
+**Need help?** Please [open an issue](https://github.com/RoyMan0/flight-clock-and-more/issues) on GitHub (the app and the Pi clock share one issue list). That's the best way to reach me, and the answer helps the next person with the same problem. Say whether it's the Mac or Windows app, what you were doing, and what happened.
+
+Ideas are welcome too, as an issue or with **Issues? Ideas? Contact me!** at the bottom of the app's Settings page.
 
 If you enjoy Flight Clock, tips are always appreciated:
 
@@ -80,6 +84,10 @@ Flight Clock grew out of **[plane-tracker-rgb-pi](https://github.com/c0wsaysmoo/
 Built with [pywebview](https://pywebview.flowrl.com) and [PyInstaller](https://pyinstaller.org). Weather from [Tomorrow.io](https://www.tomorrow.io), aircraft positions from [adsb.lol](https://adsb.lol), [OpenSky](https://opensky-network.org) and [Flightradar24](https://www.flightradar24.com).
 
 ---
+
+## License
+
+[GPL-3.0](LICENSE), the same license as the original its-a-plane-python this project is built on.
 
 <details>
 <summary><strong>For developers</strong></summary>
