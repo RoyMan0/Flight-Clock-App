@@ -50,6 +50,8 @@ The first time it opens, a setup page asks for:
 - **Which modules to show.**
 - **API keys:** optional and free. Planes overhead work without any; a free [Tomorrow.io](https://app.tomorrow.io/signup) key adds the weather, and free [AirLabs](https://airlabs.co/signup) / [FlightAware](https://www.flightaware.com/aeroapi/signup/personal) keys fill in more flight routes.
 
+> **Also have a Pi Flight Clock?** If the app and your Pi use the **same API keys**, they share those keys' allowances, but each one only tracks its own usage, so neither sees the total and together they can use up a monthly limit early. Use **different keys** in the app, or **turn off the modules** you don't need here (for example, Overhead Flights if the Pi already shows them).
+
 Click **Save & Start** and the clock appears.
 
 ## Using it
