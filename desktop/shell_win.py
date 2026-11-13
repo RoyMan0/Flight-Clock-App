@@ -16,6 +16,7 @@ window handle (SetWindowPos, styles) work from any thread.
 """
 
 import ctypes
+import io
 import logging
 import os
 import sys
@@ -43,6 +44,7 @@ user32.GetWindowLongPtrW.restype = ctypes.c_ssize_t
 user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
 user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
 user32.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
+user32.SetWindowRgn.argtypes = [wintypes.HWND, wintypes.HANDLE, wintypes.BOOL]
 user32.MonitorFromPoint.restype = wintypes.HANDLE
 user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
 user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
@@ -75,34 +77,82 @@ def _icon_path():
     return None
 
 
-# pywebview's "transparent" only clears the web view; the Form behind it stays a solid
-# light grey, which showed as white corners round the LED box and borders round every case.
-# Per-pixel transparency, the way Tauri does it for WebView2: DWM blur-behind with an empty
-# blur region turns on alpha for the window without blurring anything, and the Form's black
-# background (GDI writes alpha 0) shows the desktop. The web view's own alpha, anti-aliased
-# corners and shadows included, composites over it.
-# Not TransparencyKey: that makes a layered window, which only worked without a GPU (CI);
-# on a real PC the web view skipped the colour key (grey corners) and moving/resizing broke.
-class DWM_BLURBEHIND(ctypes.Structure):
-    _fields_ = [("dwFlags", wintypes.DWORD), ("fEnable", wintypes.BOOL),
-                ("hRgnBlur", wintypes.HANDLE), ("fTransitionOnMaximized", wintypes.BOOL)]
+# pywebview's "transparent" only clears the web view; the Form behind it is opaque, which
+# showed as white or grey corners round the LED box and borders round every case. Making the
+# window itself see-through doesn't work reliably with WebView2: a colour key (layered window)
+# and DWM blur-behind both worked on CI (no GPU) but left grey corners on a real PC, and the
+# colour key broke moving/resizing. So the window is cut to the case's shape instead (a window
+# region): the shell snapshots the page (CapturePreviewAsync keeps its transparency) and turns
+# the opaque pixels into the region. Outside it there is no window at all, on any GPU, and
+# clicks go through. The cost: no drop shadow outside the case, and hard (not anti-aliased) edges.
+RGN_OR = 2
+SHAPE_MIN_FILL = 0.05            # a nearly empty snapshot is a page still loading: keep the old shape
 
 
-DWM_BB_ENABLE, DWM_BB_BLURREGION = 0x1, 0x2
-
-
-def _see_through(form, hwnd):
+def _black_backing(form):
+    """Black behind the page: what the shape's anti-aliased edge pixels blend with."""
     from System.Drawing import Color
     form.BackColor = Color.Black
-    try:
-        gdi32 = ctypes.windll.gdi32
-        gdi32.CreateRectRgn.restype = wintypes.HANDLE
-        region = gdi32.CreateRectRgn(0, 0, -1, -1)          # empty: nothing gets blurred
-        bb = DWM_BLURBEHIND(DWM_BB_ENABLE | DWM_BB_BLURREGION, True, region, False)
-        ctypes.windll.dwmapi.DwmEnableBlurBehindWindow(wintypes.HWND(hwnd), ctypes.byref(bb))
-        gdi32.DeleteObject(region)
-    except Exception:
-        log.exception("[shell] couldn't make the panel see-through")
+
+
+def _capture_page(form):
+    """A PNG of the panel page with its transparency (WebView2 CapturePreviewAsync).
+    Call off the UI thread: the capture starts on it, and this waits for it."""
+    from System.IO import MemoryStream
+    from Microsoft.Web.WebView2.Core import CoreWebView2CapturePreviewImageFormat
+    stream = MemoryStream()
+    task = _run_on_ui(form, lambda: form.webview.CoreWebView2.CapturePreviewAsync(
+        CoreWebView2CapturePreviewImageFormat.Png, stream))
+    if not task.Wait(5000):
+        raise TimeoutError("page snapshot timed out")
+    return bytes(stream.ToArray())
+
+
+def _mask_from_png(png):
+    from PIL import Image
+    im = Image.open(io.BytesIO(png))
+    if "A" not in im.getbands():
+        return None
+    return im.getchannel("A").point(lambda v: 255 if v >= 96 else 0)
+
+
+def _region_from_mask(mask, w, h):
+    """A GDI region of the mask's opaque pixels, scaled to w×h. Rows with the same runs are
+    merged into one band, so a case is a few dozen rectangles, not one per row."""
+    from PIL import Image
+    if mask.size != (w, h):
+        mask = mask.resize((w, h), Image.NEAREST)
+    data = mask.tobytes()
+    gdi32 = ctypes.windll.gdi32
+    gdi32.CreateRectRgn.restype = wintypes.HANDLE
+    gdi32.CombineRgn.argtypes = [wintypes.HANDLE, wintypes.HANDLE, wintypes.HANDLE, ctypes.c_int]
+    gdi32.DeleteObject.argtypes = [wintypes.HANDLE]
+    region = gdi32.CreateRectRgn(0, 0, 0, 0)
+
+    def add(runs, y0, y1):
+        for x0, x1 in runs:
+            r = gdi32.CreateRectRgn(x0, y0, x1, y1)
+            gdi32.CombineRgn(region, region, r, RGN_OR)
+            gdi32.DeleteObject(r)
+
+    band, band_y = None, 0
+    for y in range(h):
+        row, runs, x = data[y * w:(y + 1) * w], [], 0
+        while True:
+            x0 = row.find(b"\xff", x)
+            if x0 < 0:
+                break
+            x1 = row.find(b"\x00", x0)
+            x1 = w if x1 < 0 else x1
+            runs.append((x0, x1))
+            x = x1
+        if runs != band:
+            if band:
+                add(band, band_y, y)
+            band, band_y = runs, y
+    if band:
+        add(band, band_y, h)
+    return region
 
 
 def _run_on_ui(form, fn):
@@ -152,6 +202,8 @@ class Shell(ShellBase):
         self._ratio_timer = None
         self._save_timer = None
         self._resizing = False
+        self._mask = None                # the case's shape (opaque pixels of the last page snapshot)
+        self._shape_timer = None
 
     # --- startup ------------------------------------------------------
 
@@ -202,11 +254,12 @@ class Shell(ShellBase):
             self._hwnd = _run_on_ui(form, lambda: int(form.Handle.ToInt64()))
             form.Activated += lambda s, e: self._on_activated()
             form.Deactivate += lambda s, e: self._on_deactivated()
-            _run_on_ui(form, lambda: _see_through(form, self._hwnd))
+            _run_on_ui(form, lambda: _black_backing(form))
             self._apply_case_limits()
             self._apply_window_prefs()
             if self.prefs["window_mode"] == "menubar":
                 self.show_panel()                # tray-only starts hidden (no taskbar flash), then shows
+            self._update_shape_soon(2.5)         # once the page has drawn its case
         self.start_update_checks()
         self.note_launch()
         self.maybe_ask_for_tip()
@@ -259,9 +312,11 @@ class Shell(ShellBase):
         self._fullscreen = not self._fullscreen
         if self._fullscreen:
             self.panel.on_top = False
+            self._set_region(None)               # full screen: the whole window
         self.panel.toggle_fullscreen()
         if not self._fullscreen:
             self._apply_window_prefs()
+            self._update_shape_soon(1.0)
 
     def _on_activated(self):
         # "On the desktop": clicking the panel mustn't lift it over other windows
@@ -378,6 +433,8 @@ class Shell(ShellBase):
 
     def _on_resized(self, *args):
         # Windows has no aspect-ratio lock: once a resize settles, fix the height to the case's ratio
+        self._reshape_from_mask()                # stretch the last shape now; re-measure once it settles
+        self._update_shape_soon(0.8)
         if self._ratio_timer:
             self._ratio_timer.cancel()
         self._ratio_timer = threading.Timer(0.3, self._keep_ratio)
@@ -393,6 +450,52 @@ class Shell(ShellBase):
         want = round(width * h / w)
         if abs(want - height) > 2:
             self.panel.resize(width, want)
+
+    # --- window shape (see _region_from_mask) ---------------------------
+
+    def _update_shape_soon(self, delay):
+        if self._shape_timer:
+            self._shape_timer.cancel()
+        self._shape_timer = threading.Timer(delay, self._update_shape)
+        self._shape_timer.daemon = True
+        self._shape_timer.start()
+
+    def _update_shape(self):
+        if not self.panel or not self._hwnd or self._fullscreen:
+            return
+        if self._resizing:
+            self._update_shape_soon(0.5)
+            return
+        try:
+            mask = _mask_from_png(_capture_page(self.panel.native))
+        except Exception:
+            log.exception("[shell] couldn't snapshot the panel for its shape")
+            return
+        if mask is None:
+            log.info("[shell] panel snapshot has no transparency; keeping the window rectangular")
+            return
+        fill = sum(mask.histogram()[255:]) / (mask.size[0] * mask.size[1])
+        if fill < SHAPE_MIN_FILL:
+            log.info(f"[shell] panel snapshot is {fill:.0%} opaque (still loading?); trying again")
+            self._update_shape_soon(2.0)
+            return
+        self._mask = mask
+        self._reshape_from_mask()
+        log.info(f"[shell] window shape: {fill:.0%} of {mask.size[0]}x{mask.size[1]} snapshot")
+
+    def _reshape_from_mask(self):
+        if self._mask is None or not self._hwnd or self._fullscreen:
+            return
+        r = wintypes.RECT()
+        user32.GetWindowRect(self._hwnd, ctypes.byref(r))
+        w, h = r.right - r.left, r.bottom - r.top
+        if w > 0 and h > 0:
+            self._set_region(_region_from_mask(self._mask, w, h))
+
+    def _set_region(self, region):
+        """The system owns the region once it's set; None = the whole window."""
+        if self._hwnd:
+            user32.SetWindowRgn(wintypes.HWND(self._hwnd), region, True)
 
     # --- frame persistence ----------------------------------------------
 
@@ -424,6 +527,8 @@ class Shell(ShellBase):
         if self.panel and self.prefs["case"] != old["case"]:
             self._apply_case_size()
         self.push_look()
+        if any(self.prefs.get(k) != old.get(k) for k in ("case", "case_color", "bezel", "screen")):
+            self._update_shape_soon(1.2)         # after the page has redrawn
         return self.prefs
 
     def _apply_window_prefs(self):

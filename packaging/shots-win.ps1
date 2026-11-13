@@ -54,6 +54,8 @@ foreach ($run in @(
     Start-Sleep 25
     Save-Screen (Join-Path $out "$($run.name).png")
     Write-Host "  shot $($run.name)"
+    $shotLog = Join-Path $data "logs\flightclock.log"
+    if (Test-Path $shotLog) { Get-Content $shotLog | Select-String "shape|snapshot|Traceback|Error" | ForEach-Object { Write-Host "    $_" } }
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
     Start-Sleep 2
 }
