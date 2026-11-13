@@ -87,6 +87,7 @@ FLIGHTCLOCK_DATA_DIR=/tmp/fc-test "dist/Flight Clock.app/Contents/MacOS/Flight C
   - uv picks wheels for the build Mac's macOS (numpy's x86_64 wheel needs macOS 14), so the Intel install uses `--python-platform x86_64-apple-darwin` with `MACOSX_DEPLOYMENT_TARGET=11.0`. The Intel `LSMinimumSystemVersion` is 11.0; check no binary's `minos` exceeds it after dependency bumps.
   - Launch at login (`SMAppService`) needs macOS 13; on 11–12 the card reports it unavailable.
 - To release: bump `desktop/version.py`, run `build.sh`, and upload both DMGs to a GitHub Release on `RELEASES_REPO` with tag `v<version>`; pushing the tag makes the Windows workflow attach the installer and zip. The update check reads `releases/latest` and links to the `-AppleSilicon.dmg` / `-Intel.dmg` asset for the Mac's chip (`hw.optional.arm64`, so an Intel build under Rosetta is pointed at the native one) or the `.exe` (Windows).
+- **After every build, delete `dist/` and `build/` entirely** (`rm -rf dist build`), once the checks are done and the DMGs are uploaded. The repo lives in the owner's Dropbox and space there is limited. The owner downloads copies from GitHub when they want to test: Windows from the "Windows build" Actions run (`gh run download`, which doesn't add to the release download counts), and the Macs from the release. Don't keep the `.app`, the DMGs, the Intel build or the Windows files locally. `build.sh` recreates both folders.
 
 ## How it fits together
 
