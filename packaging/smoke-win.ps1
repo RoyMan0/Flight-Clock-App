@@ -39,6 +39,16 @@ try {
             -Body '{"q":"Chicago, Illinois"}' "$($run.Url)/setup/geocode").Content | ConvertFrom-Json
     Write-Host "  geocode: ok=$($geo.ok) first=$($geo.results[0].name) $($geo.results[0].lat),$($geo.results[0].lon) $($geo.error)"
     if (-not $geo.ok -or -not $geo.results) { Write-Host "  !! address lookup failed"; $failed = $true }
+    # The wizard's Save & Start (its ~15 config writes in a row once failed on Windows)
+    $body = @{ location = @{ lat = 41.8781; lon = -87.6298; units = "imperial"; clock_format = "12hr"; search_radius_nm = 3;
+                             journey_code = "ORD"; min_altitude = 8000; flight_email = "" };
+               secrets = @{ tomorrow_api_key = ""; airlabs_key = ""; flightaware_key = ""; owm_api_key = "" };
+               plugins = @(@{ id = "clock_weather"; enabled = $true; duration = 30 }, @{ id = "flight_tracker"; enabled = $true; duration = 30 }) } |
+            ConvertTo-Json -Depth 8
+    try {
+        $save = Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Method Post -ContentType "application/json" -Body $body "$($run.Url)/setup/save"
+        Write-Host "  wizard save: $($save.StatusCode)"
+    } catch { Write-Host "  !! wizard save failed: $_"; $failed = $true }
 } finally { Stop-Process -Id $run.Process.Id -Force }
 
 # 2. Configured: every plugin, every page
@@ -47,6 +57,7 @@ Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force (Join-Path $data "config") | Out-Null
 $cfg = Get-Content (Join-Path $Root "core-src\config\config.example.json") -Raw | ConvertFrom-Json
 $cfg.location.location_home = @(41.8781, -87.6298)
+$cfg.location.clock_format = "12hr"           # %l in the clock formats raised "Invalid format string" on Windows
 $cfg | ConvertTo-Json -Depth 32 | Set-Content -Encoding utf8 (Join-Path $data "config\config.json")
 $env:FLIGHTCLOCK_DATA_DIR = $data; $env:FLIGHTCLOCK_HEADLESS = "1"
 $p = Start-Process $exe -PassThru
@@ -76,6 +87,18 @@ try {
     $ss = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Method Post -ContentType "application/json" -Body $body "$url/api/system_stats/test").Content | ConvertFrom-Json
     Write-Host "  system stats: ok=$($ss.ok) os=$($ss.os) values=$($ss.values | ConvertTo-Json -Compress) missing=$($ss.missing | ConvertTo-Json -Compress) $($ss.message)"
     if (-not $ss.ok -or -not $ss.values.cpu -or -not $ss.values.mem) { Write-Host "  !! system stats for this PC failed"; $failed = $true }
+    # The Test button's preview draws each module off-screen: the clock and the daylight map
+    foreach ($pid_ in "clock_weather", "world_daylight") {
+        try {
+            $pv = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Method Post -ContentType "application/json" -Body "{}" "$url/api/plugins/$pid_/preview").Content | ConvertFrom-Json
+            Write-Host "  preview ${pid_}: ok=$($pv.ok) frames=$($pv.frames.Count) $($pv.message)"
+            if (-not $pv.ok) { $failed = $true }
+        } catch {
+            $msg = $_.ErrorDetails.Message
+            Write-Host "  preview ${pid_}: $msg"
+            if ($msg -match "format") { Write-Host "  !! $pid_ can't draw"; $failed = $true }
+        }
+    }
     # Snow Report's resort search reads plugins/snow_report/resorts.json, which must ship in the bundle
     $resorts = @((Get-Ok "$url/api/snow_report/resorts?q=keystone").Content | ConvertFrom-Json)
     Write-Host "  resort search: $($resorts.Count) match(es), first=$($resorts[0].name)"
@@ -85,7 +108,7 @@ try {
 }
 
 $text = Get-Content $log -Raw
-$imports = Select-String -InputObject $text -Pattern "failed to import" -AllMatches
+$imports = Select-String -InputObject $text -Pattern "failed to import|Invalid format string" -AllMatches
 if ($imports) {
     Get-Content $log | Select-String "failed to import|Traceback|Error" | ForEach-Object { Write-Host "  !! $_" }
     $failed = $true

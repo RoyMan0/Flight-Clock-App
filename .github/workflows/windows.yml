@@ -36,6 +36,17 @@ jobs:
         shell: pwsh
         run: packaging/smoke-win.ps1
 
+      - name: Screenshots
+        shell: pwsh
+        run: packaging/shots-win.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-screenshots
+          path: dist/shots/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
       - uses: actions/upload-artifact@v4
         with:
           name: FlightClock-windows

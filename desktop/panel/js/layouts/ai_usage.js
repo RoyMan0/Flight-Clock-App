@@ -19,7 +19,7 @@
       cells.push(B.text(0, y, 10, label, { color: B.WHITE }));
       cells.push(B.text(16, y, 8, B.pad(v, 8, 'right'), { color: col }));
       cells.push(B.bar(0, y + 1, 24, (pct || 0) / 100, { color: col }));
-      if (m.reset_format !== 'off' && reset) cells.push(B.text(0, y + 2, 24, B.fit(`resets ${reset}`, 24), { color: B.DIM }));
+      if (m.reset_format !== 'off' && reset) cells.push(B.text(0, y + 2, 24, B.fit(`Resets ${reset}`, 24), { color: B.DIM }));
     };
     row(1, 'Current', m.current_pct, countdown ? m.current_countdown : m.current_reset, m.current_color);
     row(4, 'Weekly', m.weekly_pct, countdown ? m.weekly_countdown : m.weekly_reset, m.weekly_color);

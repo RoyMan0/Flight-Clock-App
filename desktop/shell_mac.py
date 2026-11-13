@@ -267,6 +267,11 @@ class Shell(ShellBase):
             self.panel.events.moved += lambda *a: self._save_panel_frame_soon()
             self.panel.events.resized += lambda *a: self._save_panel_frame_soon()
         self._apply_window_prefs()
+        if self.panel and self.prefs["window_mode"] == "menubar":
+            # Menu-bar mode starts hidden, then shows: under the icon the first time (once
+            # the icon has a place), afterwards where it was left
+            first = not self.prefs.get("panel_frame")
+            AppHelper.callLater(0.3, lambda: self.show_panel(under_status_item=first))
 
     # --- menu bar icon ------------------------------------------------
 

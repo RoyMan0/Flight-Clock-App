@@ -75,6 +75,22 @@ def _icon_path():
     return None
 
 
+# pywebview's "transparent" only clears the web view; the Form behind it stays a solid
+# light grey, which showed as white corners round the LED box and borders round every case.
+# A colour key makes the Form's own pixels see-through. The page's clear areas show the
+# Form's BackColor, so they become the key colour, and the resize zones' rgba(0,0,0,.01)
+# fill over it rounds to the same colour. A near-black key: anti-aliased edges blend with
+# it, which reads as a faint dark edge instead of a coloured fringe.
+SEE_THROUGH_KEY = (1, 2, 3)
+
+
+def _see_through(form):
+    from System.Drawing import Color
+    key = Color.FromArgb(255, *SEE_THROUGH_KEY)
+    form.BackColor = key
+    form.TransparencyKey = key
+
+
 def _run_on_ui(form, fn):
     """Run fn on the WinForms thread that owns `form`; returns its result."""
     from System import Action
@@ -172,8 +188,11 @@ class Shell(ShellBase):
             self._hwnd = _run_on_ui(form, lambda: int(form.Handle.ToInt64()))
             form.Activated += lambda s, e: self._on_activated()
             form.Deactivate += lambda s, e: self._on_deactivated()
+            _run_on_ui(form, lambda: _see_through(form))
             self._apply_case_limits()
             self._apply_window_prefs()
+            if self.prefs["window_mode"] == "menubar":
+                self.show_panel()                # tray-only starts hidden (no taskbar flash), then shows
         self.start_update_checks()
         self.note_launch()
         self.maybe_ask_for_tip()

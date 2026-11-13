@@ -35,7 +35,7 @@ body.viz-on.viz-keep #viz-progress { display: block; }
 body.viz-paused #viz-progress span { background: #ebA01e; }
 /* The Pi's EQ styles on the flip board / e-ink: the song in a strip under the visual, like the Pi */
 body.viz-strip #viz-info { top: auto; bottom: 8.5%; left: 4%; max-width: 92%; }
-body.viz-strip[data-screen="flipboard"] #viz-info { color: #f2f0e8; text-shadow: none; font-family: "DIN Condensed", "Arial Narrow", sans-serif;
+body.viz-strip[data-screen="flipboard"] #viz-info { color: #f2f0e8; text-shadow: none; font-family: "DIN Condensed", "Bahnschrift Condensed", Bahnschrift, "Arial Narrow", sans-serif; font-stretch: condensed;
                                                     font-weight: 700; font-size: clamp(10px, 4.6vmin, 30px); letter-spacing: .08em; }
 /* Visualizers (dark pictures on any screen): bright text on a soft dark backing, so the song
    reads over the brightest frames */
@@ -82,8 +82,10 @@ body[data-screen="flipboard"] #screen { background: #0b0b0c; }
 .flap, .ftile { position: absolute; }
 .ftile { z-index: 0; }
 .flap { z-index: 1; }
-.flap { --fh: 20px; font-family: "DIN Condensed", "Avenir Next Condensed", "Helvetica Neue", sans-serif;
-        font-weight: 700; }
+/* Condensed type so wide letters (W, M) fit a flap. Windows has no DIN/Avenir Condensed and fell
+   back to Arial, whose W overflowed the flap: Bahnschrift (Windows 10+) is its DIN-style face. */
+.flap { --fh: 20px; font-family: "DIN Condensed", "Avenir Next Condensed", "Bahnschrift Condensed", Bahnschrift,
+        "Arial Narrow", "Helvetica Neue", sans-serif; font-stretch: condensed; font-weight: 700; }
 .flap .f-top, .flap .f-bot, .flap .lf { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden;
         background: rgb(28, 28, 30); }
 .flap .f-top, .flap .lf-front { top: 0; border-radius: 2px 2px 0 0;

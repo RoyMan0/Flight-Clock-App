@@ -10,7 +10,7 @@ window.FC = window.FC || {};
   const PAPER = '#e8e4d8';
   const INK = '#22221f';
   const SANS = '"Avenir Next", "Helvetica Neue", Helvetica, sans-serif';
-  const COND = '"Avenir Next Condensed", "DIN Condensed", "Helvetica Neue", sans-serif';
+  const COND = '"Avenir Next Condensed", "DIN Condensed", "Bahnschrift Condensed", Bahnschrift, "Arial Narrow", "Helvetica Neue", sans-serif';
   const MIN_INTERVAL = 1000;
 
   // LED colour → e-ink pigment: greys become ink, colours keep their hue but lose
