@@ -86,10 +86,11 @@
       const x = i * 8, day = parseDay(d.date);
       cells.push(B.text(x, 1, 8, B.pad(day ? DAYS[day.getDay()] : '---', 8, 'center'), { color: [200, 200, 200] }));
       cells.push(B.icon(x + 1, 2, 6, 3, { kind: 'weather', code: iconCode(d.type) }));
-      const snow = d.snow ? depth(d.snow, m).replace(/^0("|CM)$/, '<1$1') : '';
-      if (snow) cells.push(B.text(x, 5, 8, B.pad(snow, 8, 'center'), { color: powder(d.snow) ? POWDER : ICE }));
+      // Temperatures always on the first line and any snow under them, so the days line up
       const t = `${temp(d.high, m)}/${temp(d.low, m)}`;
-      cells.push(B.text(x, snow ? 6 : 5, 8, B.pad(B.fit(t, 8), 8, 'center'), { color: [255, 190, 90] }));
+      cells.push(B.text(x, 5, 8, B.pad(B.fit(t, 8), 8, 'center'), { color: [255, 190, 90] }));
+      const snow = d.snow ? depth(d.snow, m).replace(/^0("|CM)$/, '<1$1') : '';
+      if (snow) cells.push(B.text(x, 6, 8, B.pad(snow, 8, 'center'), { color: powder(d.snow) ? POWDER : ICE }));
     });
   }
 

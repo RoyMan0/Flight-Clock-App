@@ -77,18 +77,32 @@ def _icon_path():
 
 # pywebview's "transparent" only clears the web view; the Form behind it stays a solid
 # light grey, which showed as white corners round the LED box and borders round every case.
-# A colour key makes the Form's own pixels see-through. The page's clear areas show the
-# Form's BackColor, so they become the key colour, and the resize zones' rgba(0,0,0,.01)
-# fill over it rounds to the same colour. A near-black key: anti-aliased edges blend with
-# it, which reads as a faint dark edge instead of a coloured fringe.
-SEE_THROUGH_KEY = (1, 2, 3)
+# Per-pixel transparency, the way Tauri does it for WebView2: DWM blur-behind with an empty
+# blur region turns on alpha for the window without blurring anything, and the Form's black
+# background (GDI writes alpha 0) shows the desktop. The web view's own alpha, anti-aliased
+# corners and shadows included, composites over it.
+# Not TransparencyKey: that makes a layered window, which only worked without a GPU (CI);
+# on a real PC the web view skipped the colour key (grey corners) and moving/resizing broke.
+class DWM_BLURBEHIND(ctypes.Structure):
+    _fields_ = [("dwFlags", wintypes.DWORD), ("fEnable", wintypes.BOOL),
+                ("hRgnBlur", wintypes.HANDLE), ("fTransitionOnMaximized", wintypes.BOOL)]
 
 
-def _see_through(form):
+DWM_BB_ENABLE, DWM_BB_BLURREGION = 0x1, 0x2
+
+
+def _see_through(form, hwnd):
     from System.Drawing import Color
-    key = Color.FromArgb(255, *SEE_THROUGH_KEY)
-    form.BackColor = key
-    form.TransparencyKey = key
+    form.BackColor = Color.Black
+    try:
+        gdi32 = ctypes.windll.gdi32
+        gdi32.CreateRectRgn.restype = wintypes.HANDLE
+        region = gdi32.CreateRectRgn(0, 0, -1, -1)          # empty: nothing gets blurred
+        bb = DWM_BLURBEHIND(DWM_BB_ENABLE | DWM_BB_BLURREGION, True, region, False)
+        ctypes.windll.dwmapi.DwmEnableBlurBehindWindow(wintypes.HWND(hwnd), ctypes.byref(bb))
+        gdi32.DeleteObject(region)
+    except Exception:
+        log.exception("[shell] couldn't make the panel see-through")
 
 
 def _run_on_ui(form, fn):
@@ -188,7 +202,7 @@ class Shell(ShellBase):
             self._hwnd = _run_on_ui(form, lambda: int(form.Handle.ToInt64()))
             form.Activated += lambda s, e: self._on_activated()
             form.Deactivate += lambda s, e: self._on_deactivated()
-            _run_on_ui(form, lambda: _see_through(form))
+            _run_on_ui(form, lambda: _see_through(form, self._hwnd))
             self._apply_case_limits()
             self._apply_window_prefs()
             if self.prefs["window_mode"] == "menubar":
