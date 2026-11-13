@@ -68,6 +68,7 @@ class ShellBase:
         self._quitting = False
         self._update = None                      # {"version", "url"} once a newer release is found
         self._tip_win = None
+        self._checking = False                   # a menu-started update check is running
 
     # --- per-platform hooks ------------------------------------------
 
@@ -275,27 +276,53 @@ class ShellBase:
 
     # --- updates --------------------------------------------------------
 
+    def start_update_checks(self):
+        """core-src utilities/update_check does the schedule (about once a day), the settings
+        pages' banner and the email; the shell supplies the release lookup and its own notice."""
+        from utilities import update_check
+        update_check.set_checker(self._find_release, on_new=self._on_new_update)
+        if not self.setup_mode:
+            update_check.start()
+
+    def _find_release(self):
+        """The newest GitHub release if it's newer than this copy: {"version", "url"} (the
+        installer for this computer), else None. Raises when GitHub can't be reached."""
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{RELEASES_REPO}/releases/latest",
+            headers={"Accept": "application/vnd.github+json", "User-Agent": f"FlightClock/{__version__}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            rel = json.load(r)
+        latest = str(rel.get("tag_name", "")).lstrip("v")
+        if not latest or version_tuple(latest) <= version_tuple(__version__):
+            return None
+        asset = next((a["browser_download_url"] for a in rel.get("assets", [])
+                      if a.get("name", "").endswith(self.INSTALLER_SUFFIX)), None)
+        return {"version": latest, "url": asset or rel.get("html_url")}
+
+    def _on_new_update(self, info):
+        """A newer version turned up (once per version, across restarts): the menu item, and
+        an alert unless the person is already checking from the menu (that shows its own)."""
+        self._update = {"version": info["version"], "url": info["url"]}
+        if not self._checking:
+            self.alert(f"Flight Clock {info['version']} is available.", self._update)
+
     def _check_for_updates(self, interactive=False):
-        """Look for a newer GitHub release; shown as a menu item (and an alert if asked)."""
+        """The menu's Check for Updates…"""
+        from utilities import update_check
+        self._checking = interactive
         try:
-            req = urllib.request.Request(
-                f"https://api.github.com/repos/{RELEASES_REPO}/releases/latest",
-                headers={"Accept": "application/vnd.github+json", "User-Agent": f"FlightClock/{__version__}"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                rel = json.load(r)
-            latest = str(rel.get("tag_name", "")).lstrip("v")
-            if latest and version_tuple(latest) > version_tuple(__version__):
-                asset = next((a["browser_download_url"] for a in rel.get("assets", [])
-                              if a.get("name", "").endswith(self.INSTALLER_SUFFIX)), None)
-                self._update = {"version": latest, "url": asset or rel.get("html_url")}
-                message = f"Flight Clock {latest} is available."
-            else:
-                message = f"You're up to date (Flight Clock {__version__})."
-        except Exception as e:
-            log.info(f"[shell] update check failed: {e}")
+            info = update_check.check_now()
+        finally:
+            self._checking = False
+        if info.get("available"):
+            self._update = {"version": info["version"], "url": info["url"]}
+            message = f"Flight Clock {info['version']} is available."
+        elif info.get("error"):
             message = "Couldn't check for updates right now."
+        else:
+            message = f"You're up to date (Flight Clock {__version__})."
         if interactive:
-            self.alert(message, self._update)
+            self.alert(message, self._update if info.get("available") else None)
 
 
 def version_tuple(v):

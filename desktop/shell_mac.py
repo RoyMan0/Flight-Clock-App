@@ -245,7 +245,7 @@ class Shell(ShellBase):
     def _started(self):
         # Runs on a pywebview worker thread once the GUI loop is up
         AppHelper.callAfter(self._setup_native)
-        threading.Thread(target=self._check_for_updates, daemon=True, name="update-check").start()
+        self.start_update_checks()
         self.note_launch()
         self.maybe_ask_for_tip()
 

@@ -80,8 +80,10 @@ def _register_routes(app, shell):
     @app.post("/api/desktop/open/<what>")
     def desktop_open(what):
         from utilities import support      # the tip links open in the browser, not in an app window
+        from utilities import update_check  # the settings pages' update banner
         target = {"data": runtime.DATA_DIR, "logs": runtime.LOG_DIR,
-                  "venmo": support.VENMO_URL, "paypal": support.PAYPAL_URL}.get(what)
+                  "venmo": support.VENMO_URL, "paypal": support.PAYPAL_URL,
+                  "update": update_check.status().get("url")}.get(what)
         if not target:
             return jsonify({"ok": False}), 404
         runtime.open_path(target)
