@@ -33,6 +33,14 @@ from shell_common import ShellBase
 
 log = logging.getLogger("desktop.shell")
 
+# Software drawing in WebView2. With a GPU, WebView2 composites through DirectComposition,
+# which ignored every way of shaping the panel window (colour key, blur-behind and the
+# window region all left a dark rectangle round the case on a real PC, and all worked on
+# CI, which has no GPU). The panel is small; drawing it on the CPU is cheap. WebView2 reads
+# this before pywebview's own arguments, so pywebview's flag is repeated here.
+os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+                      "--disable-features=ElasticOverscroll --disable-gpu")
+
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int,
                                 ctypes.c_int, wintypes.UINT]
