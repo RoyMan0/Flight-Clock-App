@@ -43,11 +43,17 @@ $f.BackColor = [System.Drawing.Color]::Magenta; $f.FormBorderStyle = 'None'; $f.
 Start-Sleep 4
 
 $env:FLIGHTCLOCK_HEADLESS = $null
+$theme = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+New-Item -Force $theme -ErrorAction SilentlyContinue | Out-Null
 foreach ($run in @(
         @{ name = "case-none";     prefs = @{ case = "none";    screen = "led";       panel_frame = @(80, 80, 640, 320) } },
         @{ name = "case-bedside";  prefs = @{ case = "bedside"; screen = "flipboard"; panel_frame = @(80, 80, 760, 340) } },
         @{ name = "case-mac_se";   prefs = @{ case = "mac_se";  screen = "eink";      panel_frame = @(80, 80, 440, 480) } },
-        @{ name = "case-trayonly"; prefs = @{ case = "imac_g3"; screen = "led"; window_mode = "menubar"; panel_frame = @(80, 80, 560, 560) } })) {
+        @{ name = "case-trayonly"; prefs = @{ case = "imac_g3"; screen = "led"; window_mode = "menubar"; panel_frame = @(80, 80, 560, 560) } },
+        # Windows in dark mode: pywebview gives its windows the Mica backdrop then, which
+        # DWM paints over the whole window rectangle (#202020) whatever the window's shape
+        @{ name = "case-bedside-dark"; dark = $true; prefs = @{ case = "bedside"; screen = "led"; panel_frame = @(80, 80, 760, 340) } })) {
+    Set-ItemProperty $theme AppsUseLightTheme -Type DWord -Value $(if ($run.dark) { 0 } else { 1 })
     $data = New-Data "fc-shot-$($run.name)" $run.prefs
     $env:FLIGHTCLOCK_DATA_DIR = $data
     $p = Start-Process $exe -PassThru
