@@ -53,6 +53,8 @@ user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize
 user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
 user32.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
 user32.SetWindowRgn.argtypes = [wintypes.HWND, wintypes.HANDLE, wintypes.BOOL]
+user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
 user32.MonitorFromPoint.restype = wintypes.HANDLE
 user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
 user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
@@ -174,6 +176,50 @@ def _run_on_ui(form, fn):
     else:
         call()
     return out[0] if out else None
+
+
+def _windows_over(panel_hwnd, panel_rect):
+    """The panel, every window inside it (the web view's, some in the WebView2 process), and
+    any other visible top-level window of this app at the panel's spot: [(hwnd, rect, class,
+    pid, kind)]."""
+    out, seen = [], set()
+    cls_buf = ctypes.create_unicode_buffer(128)
+
+    def info(hwnd, kind):
+        if hwnd in seen:
+            return
+        seen.add(hwnd)
+        r = wintypes.RECT()
+        user32.GetWindowRect(hwnd, ctypes.byref(r))
+        user32.GetClassNameW(hwnd, cls_buf, 128)
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        out.append((hwnd, r, cls_buf.value, pid.value, kind))
+
+    info(panel_hwnd, "panel")
+    child_cb = _ENUM_PROC(lambda hwnd, _: (info(hwnd, "inside"), True)[1])
+    user32.EnumChildWindows(panel_hwnd, child_cb, 0)        # all descendants
+
+    me = os.getpid()
+
+    def top(hwnd, _):
+        if hwnd != panel_hwnd and user32.IsWindowVisible(hwnd):
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            r = wintypes.RECT()
+            user32.GetWindowRect(hwnd, ctypes.byref(r))
+            overlaps = (r.left < panel_rect.right and r.right > panel_rect.left
+                        and r.top < panel_rect.bottom and r.bottom > panel_rect.top)
+            same_size = (abs((r.right - r.left) - (panel_rect.right - panel_rect.left)) <= 2
+                         and abs((r.bottom - r.top) - (panel_rect.bottom - panel_rect.top)) <= 2)
+            if pid.value == me and overlaps and same_size:
+                info(hwnd, "other window")
+        return True
+    user32.EnumWindows(_ENUM_PROC(top), 0)
+    return out
+
+
+_ENUM_PROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
 
 # ----------------------------------------------------------------------
@@ -528,15 +574,33 @@ class Shell(ShellBase):
         except Exception:
             log.exception("[shell] couldn't measure the panel")
             return
+        if w <= 0 or h <= 0:
+            return
+        page_x, page_y = r.left + dx, r.top + dy            # the page's top-left on screen
         if log_it:
             log.info(f"[shell] window {r.right - r.left}x{r.bottom - r.top}, page {w}x{h} at +{dx}+{dy}, "
                      f"snapshot {self._mask.size[0]}x{self._mask.size[1]}")
-        if w > 0 and h > 0:
-            self._set_region(_region_from_mask(self._mask, w, h, dx, dy))
+        # The panel window, the web view's own windows inside it, and any other window of this
+        # app over the same spot all get the shape: on a real PC something still painted the
+        # dark-mode window colour (#202020) over the whole rectangle with only the panel cut.
+        for hwnd, rect, cls, pid, kind in _windows_over(self._hwnd, r):
+            region = _region_from_mask(self._mask, w, h, page_x - rect.left, page_y - rect.top)
+            ok = user32.SetWindowRgn(wintypes.HWND(hwnd), region, True)
+            if log_it:
+                err = 0 if ok else ctypes.get_last_error()
+                log.info(f"[shell]   {kind} {cls} pid {pid} {rect.right - rect.left}x{rect.bottom - rect.top}"
+                         f"+{rect.left}+{rect.top}: shape {'set' if ok else f'FAILED ({err})'}")
 
     def _set_region(self, region):
-        """The system owns the region once it's set; None = the whole window."""
-        if self._hwnd:
+        """The system owns the region once it's set; None = the whole window (and its insides)."""
+        if not self._hwnd:
+            return
+        if region is None:
+            r = wintypes.RECT()
+            user32.GetWindowRect(self._hwnd, ctypes.byref(r))
+            for hwnd, *_ in _windows_over(self._hwnd, r):
+                user32.SetWindowRgn(wintypes.HWND(hwnd), None, True)
+        else:
             user32.SetWindowRgn(wintypes.HWND(self._hwnd), region, True)
 
     # --- frame persistence ----------------------------------------------
