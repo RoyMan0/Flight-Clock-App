@@ -33,11 +33,11 @@ from shell_common import ShellBase
 
 log = logging.getLogger("desktop.shell")
 
-# Software drawing in WebView2. With a GPU, WebView2 composites through DirectComposition,
-# which ignored every way of shaping the panel window (colour key, blur-behind and the
-# window region all left a dark rectangle round the case on a real PC, and all worked on
-# CI, which has no GPU). The panel is small; drawing it on the CPU is cheap. WebView2 reads
-# this before pywebview's own arguments, so pywebview's flag is repeated here.
+# Software drawing in WebView2. Added while a dark rectangle round the case on a real PC
+# was blamed on GPU compositing; the cause turned out to be the dark-mode Mica backdrop
+# (_no_backdrop). The panel is small, so drawing it on the CPU is cheap; dropping this is
+# untested on a GPU. WebView2 reads this before pywebview's own arguments, so pywebview's
+# flag is repeated here.
 os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                       "--disable-features=ElasticOverscroll --disable-gpu")
 
@@ -97,6 +97,36 @@ def _icon_path():
 # clicks go through. The cost: no drop shadow outside the case, and hard (not anti-aliased) edges.
 RGN_OR = 2
 SHAPE_MIN_FILL = 0.05            # a nearly empty snapshot is a page still loading: keep the old shape
+
+
+DWMWA_SYSTEMBACKDROP_TYPE = 38
+DWMSBT_NONE = 1
+
+
+def _no_backdrop(hwnd):
+    """No Windows 11 system backdrop behind the window. With Windows in dark mode pywebview
+    gives every window Mica, which DWM paints over the whole window rectangle (#202020),
+    ignoring the window's shape: the dark box round the cases. (Windows 10 ignores this.)"""
+    value = ctypes.c_int(DWMSBT_NONE)
+    ctypes.windll.dwmapi.DwmSetWindowAttribute(wintypes.HWND(hwnd), DWMWA_SYSTEMBACKDROP_TYPE,
+                                               ctypes.byref(value), ctypes.sizeof(value))
+
+
+def _patch_backdrop():
+    """pywebview re-applies its backdrop at creation and on every theme change
+    (update_title_bar_theme): turn it off again for see-through windows (the panel)."""
+    try:
+        from webview.platforms import winforms as wf
+        form_cls = wf.BrowserView.BrowserForm
+        original = form_cls.update_title_bar_theme
+
+        def update_title_bar_theme(self):
+            original(self)
+            if getattr(self.pywebview_window, "transparent", False):
+                _no_backdrop(self.Handle.ToInt64())
+        form_cls.update_title_bar_theme = update_title_bar_theme
+    except Exception:
+        log.exception("[shell] couldn't patch pywebview's window backdrop")
 
 
 def _black_backing(form):
@@ -284,6 +314,7 @@ class Shell(ShellBase):
             self.panel.events.closing += self._on_panel_closing
             self.panel.events.moved += lambda *a: self._save_panel_frame_soon()
             self.panel.events.resized += self._on_resized
+        _patch_backdrop()
         try:
             webview.start(self._started, gui="edgechromium", icon=_icon_path(), private_mode=False,
                           storage_path=os.path.join(runtime.DATA_DIR, "webview"))
@@ -310,6 +341,7 @@ class Shell(ShellBase):
             form.Activated += lambda s, e: self._on_activated()
             form.Deactivate += lambda s, e: self._on_deactivated()
             _run_on_ui(form, lambda: _black_backing(form))
+            _no_backdrop(self._hwnd)             # in case the patch above didn't take
             self._apply_case_limits()
             self._apply_window_prefs()
             if self.prefs["window_mode"] == "menubar":
