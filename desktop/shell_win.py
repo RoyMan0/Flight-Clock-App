@@ -543,18 +543,18 @@ class Shell(ShellBase):
 
     # --- window shape (see _region_from_mask) ---------------------------
 
-    def _update_shape_soon(self, delay):
+    def _update_shape_soon(self, delay, confirm=True):
         if self._shape_timer:
             self._shape_timer.cancel()
-        self._shape_timer = threading.Timer(delay, self._update_shape)
+        self._shape_timer = threading.Timer(delay, self._update_shape, args=(confirm,))
         self._shape_timer.daemon = True
         self._shape_timer.start()
 
-    def _update_shape(self):
+    def _update_shape(self, confirm=True):
         if not self.panel or not self._hwnd or self._fullscreen:
             return
         if self._resizing:
-            self._update_shape_soon(0.5)
+            self._update_shape_soon(0.5, confirm)
             return
         try:
             png = _capture_page(self.panel.native)
@@ -582,9 +582,15 @@ class Shell(ShellBase):
             log.info(f"[shell] panel snapshot is {fill:.0%} opaque (still loading?); trying again")
             self._update_shape_soon(2.0)
             return
+        changed = self._mask is None or self._mask.tobytes() != mask.tobytes()
         self._mask = mask
-        self._reshape_from_mask(log_it=True)
-        log.info(f"[shell] window shape: {fill:.0%} of {mask.size[0]}x{mask.size[1]} snapshot")
+        if changed:
+            self._reshape_from_mask(log_it=True)
+            log.info(f"[shell] window shape: {fill:.0%} of {mask.size[0]}x{mask.size[1]} snapshot")
+        if confirm:
+            # A snapshot taken while the page loads can be wholly opaque (seen once on CI: the
+            # window stayed a black rectangle): look again once it has settled
+            self._update_shape_soon(6.0, confirm=False)
 
     def _page_rect(self):
         """Where the web view is inside the window, in pixels: (dx, dy, w, h). Not simply the
