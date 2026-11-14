@@ -260,6 +260,9 @@ class Shell(ShellBase):
             self._apply_window_prefs()
             if self.prefs["window_mode"] == "menubar":
                 self.show_panel()                # tray-only starts hidden (no taskbar flash), then shows
+            # The frameless form loses a title bar's height at creation (WinForms keeps the
+            # client size when the border goes), which left the case at the wrong ratio
+            self._keep_ratio()
             self._update_shape_soon(2.5)         # once the page has drawn its case
         self.start_update_checks()
         self.note_launch()
