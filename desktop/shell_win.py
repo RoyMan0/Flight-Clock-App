@@ -116,9 +116,10 @@ def _mask_from_png(png):
     return im.getchannel("A").point(lambda v: 255 if v >= 96 else 0)
 
 
-def _region_from_mask(mask, w, h):
-    """A GDI region of the mask's opaque pixels, scaled to w×h. Rows with the same runs are
-    merged into one band, so a case is a few dozen rectangles, not one per row."""
+def _region_from_mask(mask, w, h, dx=0, dy=0):
+    """A GDI region of the mask's opaque pixels, scaled to w×h and placed at (dx, dy) in the
+    window. Rows with the same runs are merged into one band, so a case is a few dozen
+    rectangles, not one per row."""
     from PIL import Image
     if mask.size != (w, h):
         mask = mask.resize((w, h), Image.NEAREST)
@@ -131,7 +132,7 @@ def _region_from_mask(mask, w, h):
 
     def add(runs, y0, y1):
         for x0, x1 in runs:
-            r = gdi32.CreateRectRgn(x0, y0, x1, y1)
+            r = gdi32.CreateRectRgn(x0 + dx, y0 + dy, x1 + dx, y1 + dy)
             gdi32.CombineRgn(region, region, r, RGN_OR)
             gdi32.DeleteObject(r)
 
@@ -480,17 +481,40 @@ class Shell(ShellBase):
             self._update_shape_soon(2.0)
             return
         self._mask = mask
-        self._reshape_from_mask()
+        self._reshape_from_mask(log_it=True)
         log.info(f"[shell] window shape: {fill:.0%} of {mask.size[0]}x{mask.size[1]} snapshot")
 
-    def _reshape_from_mask(self):
-        if self._mask is None or not self._hwnd or self._fullscreen:
-            return
+    def _page_rect(self):
+        """Where the web view is inside the window, in pixels: (dx, dy, w, h). Not simply the
+        whole window: with display scaling (125%, 150%) it came out shorter than the window,
+        and a shape stretched over the window left a border of the window showing."""
         r = wintypes.RECT()
         user32.GetWindowRect(self._hwnd, ctypes.byref(r))
-        w, h = r.right - r.left, r.bottom - r.top
+        form = self.panel.native
+        wv = getattr(form, "webview", None)
+        if wv is None:
+            return 0, 0, r.right - r.left, r.bottom - r.top, r
+
+        def measure():
+            from System.Drawing import Point
+            p = wv.PointToScreen(Point(0, 0))
+            return p.X, p.Y, wv.Width, wv.Height
+        x, y, w, h = _run_on_ui(form, measure)
+        return x - r.left, y - r.top, w, h, r
+
+    def _reshape_from_mask(self, log_it=False):
+        if self._mask is None or not self._hwnd or self._fullscreen:
+            return
+        try:
+            dx, dy, w, h, r = self._page_rect()
+        except Exception:
+            log.exception("[shell] couldn't measure the panel")
+            return
+        if log_it:
+            log.info(f"[shell] window {r.right - r.left}x{r.bottom - r.top}, page {w}x{h} at +{dx}+{dy}, "
+                     f"snapshot {self._mask.size[0]}x{self._mask.size[1]}")
         if w > 0 and h > 0:
-            self._set_region(_region_from_mask(self._mask, w, h))
+            self._set_region(_region_from_mask(self._mask, w, h, dx, dy))
 
     def _set_region(self, region):
         """The system owns the region once it's set; None = the whole window."""
