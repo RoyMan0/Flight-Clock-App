@@ -33,14 +33,6 @@ from shell_common import ShellBase
 
 log = logging.getLogger("desktop.shell")
 
-# Software drawing in WebView2. Added while a dark rectangle round the case on a real PC
-# was blamed on GPU compositing; the cause turned out to be the dark-mode Mica backdrop
-# (_no_backdrop). The panel is small, so drawing it on the CPU is cheap; dropping this is
-# untested on a GPU. WebView2 reads this before pywebview's own arguments, so pywebview's
-# flag is repeated here.
-os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                      "--disable-features=ElasticOverscroll --disable-gpu")
-
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int,
                                 ctypes.c_int, wintypes.UINT]
