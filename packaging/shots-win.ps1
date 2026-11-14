@@ -62,6 +62,8 @@ foreach ($run in @(
     Write-Host "  shot $($run.name)"
     $shotLog = Join-Path $data "logs\flightclock.log"
     if (Test-Path $shotLog) { Get-Content $shotLog | Select-String "shape|snapshot|Traceback|Error" | ForEach-Object { Write-Host "    $_" } }
+    $snap = Join-Path $data "logs\panel-shape.png"     # the page snapshot the window's shape came from
+    if (Test-Path $snap) { Copy-Item $snap (Join-Path $out "$($run.name)-snapshot.png") }
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
     Start-Sleep 2
 }

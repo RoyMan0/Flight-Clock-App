@@ -557,8 +557,14 @@ class Shell(ShellBase):
             self._update_shape_soon(0.5)
             return
         try:
-            mask = _mask_from_png(_capture_page(self.panel.native))
+            png = _capture_page(self.panel.native)
+            mask = _mask_from_png(png)
             self._shape_failures = 0
+            try:                                 # the last snapshot, for checking a wrong shape
+                with open(os.path.join(runtime.LOG_DIR, "panel-shape.png"), "wb") as f:
+                    f.write(png)
+            except OSError:
+                pass
         except Exception as e:
             # Early on the web view can still be settling ("disposed"/not ready): try again
             self._shape_failures = getattr(self, "_shape_failures", 0) + 1
