@@ -136,10 +136,16 @@ body[data-screen="eink"] #screen { background: #e8e4d8; }
 /* transparent window lets clicks on fully clear pixels fall through to what's behind it.   */
 .grip { position: fixed; z-index: 50; background: rgba(0, 0, 0, .01); }
 body.fs .grip, body.preview .grip { display: none; }
+/* --gl/--gt/--gr/--gb: the box the zones sit on (window edges by default). Windows cuts its window
+   to the case's shape, so core.js moves them onto the case body there; --gcx/--gcy pull the corner
+   zones in to a rounded corner's curve. */
+:root { --gl: 0px; --gt: 0px; --gr: 0px; --gb: 0px; --gcx: 0px; --gcy: 0px; }
 .g-nw, .g-ne, .g-se, .g-sw { width: 26px; height: 26px; }
-.g-nw { left: 0; top: 0; cursor: nwse-resize; }      .g-se { right: 0; bottom: 0; cursor: nwse-resize; }
-.g-ne { right: 0; top: 0; cursor: nesw-resize; }     .g-sw { left: 0; bottom: 0; cursor: nesw-resize; }
-.g-n, .g-s { left: 26px; right: 26px; height: 9px; cursor: ns-resize; }
-.g-n { top: 0; }  .g-s { bottom: 0; }
-.g-e, .g-w { top: 26px; bottom: 26px; width: 9px; cursor: ew-resize; }
-.g-e { right: 0; }  .g-w { left: 0; }
+.g-nw { left: calc(var(--gl) + var(--gcx)); top: calc(var(--gt) + var(--gcy)); cursor: nwse-resize; }
+.g-se { right: calc(var(--gr) + var(--gcx)); bottom: calc(var(--gb) + var(--gcy)); cursor: nwse-resize; }
+.g-ne { right: calc(var(--gr) + var(--gcx)); top: calc(var(--gt) + var(--gcy)); cursor: nesw-resize; }
+.g-sw { left: calc(var(--gl) + var(--gcx)); bottom: calc(var(--gb) + var(--gcy)); cursor: nesw-resize; }
+.g-n, .g-s { left: calc(var(--gl) + 26px); right: calc(var(--gr) + 26px); height: 9px; cursor: ns-resize; }
+.g-n { top: var(--gt); }  .g-s { bottom: var(--gb); }
+.g-e, .g-w { top: calc(var(--gt) + 26px); bottom: calc(var(--gb) + 26px); width: 9px; cursor: ew-resize; }
+.g-e { right: var(--gr); }  .g-w { left: var(--gl); }

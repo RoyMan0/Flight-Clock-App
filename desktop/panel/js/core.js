@@ -37,6 +37,7 @@
     body.dataset.case = prefs.case;
     body.dataset.color = prefs.case_color || '';
     body.classList.toggle('bezel', !!prefs.bezel);
+    setTimeout(() => window.placeGrips && window.placeGrips(), 60);   // the case may have changed
     for (const [name, s] of Object.entries(screens)) s.show(name === prefs.screen);
     for (const s of Object.values(screens)) s.applyPrefs(prefs);
     viz.setScreen(prefs.screen);
@@ -198,6 +199,34 @@
     g.addEventListener('dblclick', (e) => e.stopPropagation());
   }
   if (preview) body.classList.add('preview');
+
+  // Windows cuts the window to the case's shape (shell_win), so zones on the window's edges
+  // would be cut off wherever a case doesn't fill its window (the bedside clock's top, the
+  // iMac's and mid-century's rounded sides). There they go on the case body's edges instead.
+  const WINDOWS = /Windows/.test(navigator.userAgent);
+  function placeGrips() {
+    if (!WINDOWS) return;
+    const root = document.documentElement.style;
+    const part = [document.querySelector('#case .c-body'), document.getElementById('case')]
+      .find(el => el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0);
+    if (!part) return;
+    const r = part.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+    const cs = getComputedStyle(part);
+    // The corner's radius (horizontal / vertical, px or % of the box): pull the corner zone in
+    // to about where the curve is, so it lands on the case and not in the cut-away corner
+    const [rx, ry] = (cs.borderTopLeftRadius || '0').split(' ');
+    const px = (v, size) => v && v.endsWith('%') ? parseFloat(v) / 100 * size : parseFloat(v) || 0;
+    const cx = Math.max(0, px(rx, r.width) * 0.29 - 6), cy = Math.max(0, px(ry || rx, r.height) * 0.29 - 6);
+    root.setProperty('--gl', Math.max(0, r.left) + 'px');
+    root.setProperty('--gt', Math.max(0, r.top) + 'px');
+    root.setProperty('--gr', Math.max(0, W - r.right) + 'px');
+    root.setProperty('--gb', Math.max(0, H - r.bottom) + 'px');
+    root.setProperty('--gcx', cx + 'px');
+    root.setProperty('--gcy', cy + 'px');
+  }
+  window.addEventListener('resize', placeGrips);
+  window.placeGrips = placeGrips;
+  setTimeout(placeGrips, 300);
 
   if (preview) {
     const fx = FC.FIXTURES[Number(params.get('fixture'))] || FC.FIXTURES[0];
