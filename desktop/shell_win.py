@@ -472,8 +472,15 @@ class Shell(ShellBase):
             return
         try:
             mask = _mask_from_png(_capture_page(self.panel.native))
-        except Exception:
-            log.exception("[shell] couldn't snapshot the panel for its shape")
+            self._shape_failures = 0
+        except Exception as e:
+            # Early on the web view can still be settling ("disposed"/not ready): try again
+            self._shape_failures = getattr(self, "_shape_failures", 0) + 1
+            if self._shape_failures <= 6:
+                log.info(f"[shell] panel snapshot failed ({type(e).__name__}); retrying")
+                self._update_shape_soon(1.5)
+            else:
+                log.exception("[shell] couldn't snapshot the panel for its shape")
             return
         if mask is None:
             log.info("[shell] panel snapshot has no transparency; keeping the window rectangular")
